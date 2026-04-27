@@ -1013,12 +1013,6 @@ const DATA_RANGE = { minY:null, minM:null, minD:null, maxY:null, maxM:null, maxD
 // Helper: retorna a data da linha como YYYYMMDD numérico.
 function rowYMD(r) { const v = r[C.data]; return typeof v === 'number' ? v : +v; }
 function ymdNum(ymd) { return ymd ? (ymd.y*10000 + ymd.m*100 + ymd.d) : 0; }
-// Países da América do Sul (matching exato com os nomes do dataset).
-const SOUTH_AMERICA = new Set([
-  'ARGENTINA','BOLIVIA','CHILE','COLOMBIA','EQUADOR',
-  'GUIANA','PARAGUAI','PERU','URUGUAI','VENEZUELA','BRASIL'
-]);
-
 // Mapeamento UF -> Nome completo do estado.
 const UF_NOME = {
   AC:'Acre', AL:'Alagoas', AM:'Amazonas', AP:'Amapá',
@@ -2805,7 +2799,7 @@ function applyBrOnlyToggle() {
 
 // ===== SISTEMA DE MAPAS HIERÁRQUICOS =====
 // Carrega dados Natural Earth (paises com paths reais + estados de 9 países).
-const GEO = (window.__GEO_WORLD__ || { countries:{}, states:{}, continentBbox:{} });
+const WGEO = (window.__GEO_WORLD__ || { countries:{}, states:{}, continentBbox:{} });
 
 // Cores categóricas por continente (matching imagem de referência)
 const CONT_COLORS = {
@@ -2847,7 +2841,7 @@ for (const k in PAIS_DATASET_TO_NE) PAIS_NE_TO_DATASET[PAIS_DATASET_TO_NE[k]] = 
 const PAIS_CONTINENTE = {};
 for (const neName in GEO.countries) {
   const dsName = PAIS_NE_TO_DATASET[neName] || neName;
-  PAIS_CONTINENTE[dsName] = GEO.countries[neName].c;
+  PAIS_CONTINENTE[dsName] = WGEO.countries[neName].c;
 }
 // Lista de países por continente
 const CONTINENT_PAISES = {};
@@ -2934,7 +2928,7 @@ function escAttr(s) { return String(s||'').replace(/"/g,'&quot;').replace(/&/g,'
 function bboxOfCountries(countryNeNames, padding) {
   let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
   for (const ne of countryNeNames) {
-    const c = GEO.countries[ne];
+    const c = WWGEO.countries[ne];
     if (!c) continue;
     const pts = c.d.match(/-?\d+\.?\d*/g);
     if (!pts) continue;
@@ -2954,7 +2948,7 @@ function bboxOfCountries(countryNeNames, padding) {
 }
 
 function bboxOfStates(country) {
-  const states = GEO.states[country] || {};
+  const states = WWGEO.states[country] || {};
   let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
   for (const n in states) {
     const pts = states[n].d.match(/-?\d+\.?\d*/g);
@@ -3017,8 +3011,8 @@ function renderWorldHierarchy() {
     const cAgg = aggregateByContinent(eAgg);
     let maxC = 0;
     for (const c in cAgg) if (cAgg[c].val > maxC) maxC = cAgg[c].val;
-    for (const ne in GEO.countries) {
-      const country = GEO.countries[ne];
+    for (const ne in WGEO.countries) {
+      const country = WWGEO.countries[ne];
       const cont = country.c;
       const dsName = PAIS_NE_TO_DATASET[ne] || ne;
       const v = (cAgg[cont] || {val:0}).val;
@@ -3060,8 +3054,8 @@ function renderWorldHierarchy() {
       const v = (eAgg.porPais[ds] || {val:0}).val;
       if (v > max) max = v;
     }
-    for (const ne in GEO.countries) {
-      const country = GEO.countries[ne];
+    for (const ne in WGEO.countries) {
+      const country = WWGEO.countries[ne];
       if (country.c !== continent) continue;
       const dsName = PAIS_NE_TO_DATASET[ne] || ne;
       const info = eAgg.porPais[dsName];
@@ -3096,7 +3090,7 @@ function renderWorldHierarchy() {
   } else if (state.mapCountry) {
     // === NÍVEL 3: PAÍS — estados do país (drill total) ===
     const country = state.mapCountry;
-    const states = GEO.states[country] || {};
+    const states = WWGEO.states[country] || {};
     svg.setAttribute('viewBox', bboxOfStates(country));
     // Para Brasil, podemos cruzar com agg.porUf usando códigos
     // Para outros países: por enquanto, só mostra os estados (sem dados específicos)

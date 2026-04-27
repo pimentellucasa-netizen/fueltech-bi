@@ -427,6 +427,96 @@
   .map-agg-toggle{margin-left:6px}
   .map-agg-toggle button{font-size:10px;padding:4px 9px}
 
+    /* ===== Tabs Brasil/Exportações ===== */
+  .tabs-bar{display:flex;gap:0;background:var(--bg-alt);
+    border-bottom:1px solid var(--border);padding:0 24px}
+  .tabs-bar button{background:transparent;border:none;color:var(--muted);
+    padding:14px 22px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:inherit;letter-spacing:.3px;border-bottom:3px solid transparent;
+    transition:all .15s;display:flex;align-items:center;gap:7px}
+  .tabs-bar button:hover{color:var(--text)}
+  .tabs-bar button.active{color:var(--orange);border-bottom-color:var(--orange);
+    background:linear-gradient(180deg,transparent 0%,rgba(220,38,38,.05) 100%)}
+  .tabs-bar button .tab-icon{font-size:16px}
+  .tabs-bar button .tab-count{font-size:10px;color:var(--muted);font-weight:600;
+    background:var(--chip-bg);padding:2px 8px;border-radius:10px;letter-spacing:.4px}
+  .tabs-bar button.active .tab-count{background:rgba(220,38,38,.15);color:var(--orange)}
+
+  /* ===== Aba Exportações ===== */
+  #tab_export{display:none;padding:18px 24px}
+  #tab_export.active{display:block}
+  #tab_export .export-head{display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:14px;flex-wrap:wrap;gap:10px}
+  #tab_export .export-title{font-size:18px;font-weight:700;color:var(--text);
+    display:flex;align-items:center;gap:8px}
+  #tab_export .export-title .accent{color:var(--orange)}
+  #tab_export .export-controls{display:flex;gap:8px;align-items:center}
+  .sa-only-toggle{padding:7px 14px;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.2);border-radius:18px;cursor:pointer;
+    transition:all .15s;display:flex;align-items:center;gap:7px;
+    font-size:11px;font-family:inherit;color:var(--muted);font-weight:600;white-space:nowrap}
+  .sa-only-toggle:hover{background:rgba(220,38,38,.14);
+    border-color:rgba(220,38,38,.5);color:var(--text)}
+  .sa-only-toggle.active{background:linear-gradient(135deg,rgba(220,38,38,.25) 0%,rgba(220,38,38,.12) 100%);
+    border-color:var(--orange);color:var(--text);
+    box-shadow:0 0 0 1px rgba(220,38,38,.25)}
+  #tab_export .export-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+  @media(max-width:1100px){#tab_export .export-grid{grid-template-columns:1fr}}
+
+  /* Mapa da AS */
+  .sa-map-wrap{background:var(--card-grad);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-sm);
+    border-top:3px solid var(--orange)}
+  .sa-map-wrap h2{margin:0 0 10px;font-size:14px;font-weight:700;color:var(--text);
+    display:flex;align-items:center;justify-content:space-between}
+  .sa-map-svg{width:100%;height:auto;display:block}
+  .sa-map-svg .pais{stroke:var(--bg);stroke-width:1.5;cursor:pointer;
+    transition:stroke-width .15s,filter .15s}
+  .sa-map-svg .pais:hover{stroke-width:2.5;filter:brightness(1.2)}
+  .sa-map-svg .pais.selected{stroke:var(--orange);stroke-width:3}
+  .sa-map-svg .pais.brazil-home{fill:#0d0d0d;stroke:var(--border)}
+  .sa-map-svg .pais-label{fill:var(--text);font-size:9px;font-weight:700;
+    pointer-events:none;text-anchor:middle;letter-spacing:.3px}
+  .sa-map-wrap .legend{display:flex;align-items:center;gap:8px;margin-top:10px;
+    font-size:10px;color:var(--muted)}
+  .sa-map-wrap .legend-bar{flex:1;height:6px;border-radius:3px;
+    background:linear-gradient(to right,#1a1a1a 0%,#3c0c0c 10%,#7f1d1d 25%,#b91c1c 45%,#dc2626 65%,#ef4444 85%,#fb923c 100%)}
+
+  /* Tabela países */
+  .countries-panel{background:var(--card-grad);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-sm);
+    border-top:3px solid var(--orange);max-height:560px;display:flex;flex-direction:column}
+  .countries-panel h2{margin:0 0 10px;font-size:14px;font-weight:700;color:var(--text)}
+  .countries-table{width:100%;border-collapse:collapse;font-size:12px;flex:1;overflow:auto}
+  .countries-table th{padding:8px 10px;text-align:left;font-weight:700;
+    color:var(--text);border-bottom:1px solid var(--border-strong);
+    font-size:10px;text-transform:uppercase;letter-spacing:.5px;
+    cursor:pointer;user-select:none;background:var(--bg-alt);position:sticky;top:0}
+  .countries-table th:hover{color:var(--orange)}
+  .countries-table th.num{text-align:right}
+  .countries-table td{padding:7px 10px;border-bottom:1px solid var(--border);
+    color:var(--text-soft)}
+  .countries-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .countries-table tr{cursor:pointer;transition:background .1s}
+  .countries-table tr:hover{background:var(--table-row-hover)}
+  .countries-table tr.sa-flag{position:relative}
+  .countries-table tr.sa-flag td:first-child::before{content:'★';color:var(--orange);
+    margin-right:4px;font-size:9px}
+  .country-bar{display:inline-block;height:6px;background:var(--orange);
+    border-radius:3px;vertical-align:middle;margin-right:6px}
+
+  /* Export KPIs */
+  .export-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;margin-bottom:14px}
+  .export-kpis .kpi-card{background:var(--card-grad);border:1px solid var(--border);
+    border-left:3px solid var(--orange);border-radius:var(--radius);padding:14px;
+    box-shadow:var(--shadow-sm)}
+  .export-kpis .kpi-card .kpi-label{font-size:10px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  .export-kpis .kpi-card .kpi-value{font-size:22px;font-weight:800;color:var(--text);
+    margin-top:6px;letter-spacing:-.5px}
+  .export-kpis .kpi-card .kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
   /* ===== Modal genérico ===== */
   .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
     z-index:500;backdrop-filter:blur(2px)}
@@ -540,7 +630,11 @@
     <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   </button>
 </header>
-<div class="layout">
+<div class="tabs-bar" id="tabs_bar">
+  <button type="button" class="active" data-tab="brasil"><span class="tab-icon">🇧🇷</span>Brasil</button>
+  <button type="button" data-tab="export"><span class="tab-icon">🌎</span>Exportações <span class="tab-count" id="tab_export_count">—</span></button>
+</div>
+<div class="layout" id="tab_brasil">
   <aside>
     <h3>Busca de Cliente</h3>
     <div class="filter-group">
@@ -731,6 +825,96 @@
   </main>
 </div>
 
+<!-- ===== ABA: Exportações ===== -->
+<div id="tab_export">
+  <div class="export-head">
+    <div class="export-title">
+      <span>🌎</span> <span class="accent">Exportações</span> — Vendas Internacionais
+    </div>
+    <div class="export-controls">
+      <button type="button" class="sa-only-toggle" id="sa_only_toggle" title="Filtrar somente países da América do Sul">
+        Apenas América do Sul
+      </button>
+    </div>
+  </div>
+
+  <div class="export-kpis" id="export_kpis"></div>
+
+  <div class="export-grid">
+    <div class="sa-map-wrap">
+      <h2>
+        <span>Mapa — América do Sul</span>
+        <span style="font-size:10px;color:var(--muted);font-weight:400" id="sa_map_summary"></span>
+      </h2>
+      <svg class="sa-map-svg" id="sa_map" viewBox="0 0 400 520" xmlns="http://www.w3.org/2000/svg">
+  <!-- Brasil (matriz, cinza escuro) -->
+  <path class="pais brazil-home" data-p="BRASIL" d="M 215 80 L 280 75 L 320 95 L 345 130 L 360 175 L 365 220 L 360 270 L 340 310 L 305 335 L 270 345 L 235 340 L 215 315 L 200 285 L 195 240 L 200 195 L 210 145 Z"/>
+  <text class="pais-label" x="280" y="200">BRASIL</text>
+
+  <!-- Venezuela -->
+  <path class="pais" data-p="VENEZUELA" d="M 175 60 L 230 55 L 260 70 L 250 95 L 220 100 L 185 95 L 170 80 Z"/>
+  <text class="pais-label" x="215" y="80">VEN</text>
+
+  <!-- Colombia -->
+  <path class="pais" data-p="COLOMBIA" d="M 130 75 L 175 60 L 200 90 L 195 130 L 175 155 L 150 145 L 130 115 Z"/>
+  <text class="pais-label" x="165" y="110">COL</text>
+
+  <!-- Equador -->
+  <path class="pais" data-p="EQUADOR" d="M 110 145 L 150 145 L 155 175 L 130 180 L 110 165 Z"/>
+  <text class="pais-label" x="135" y="167">EQU</text>
+
+  <!-- Peru -->
+  <path class="pais" data-p="PERU" d="M 110 180 L 175 175 L 200 215 L 195 270 L 170 290 L 130 270 L 110 230 Z"/>
+  <text class="pais-label" x="155" y="240">PERU</text>
+
+  <!-- Bolivia -->
+  <path class="pais" data-p="BOLIVIA" d="M 195 215 L 245 215 L 270 250 L 260 290 L 220 295 L 195 270 Z"/>
+  <text class="pais-label" x="232" y="260">BOL</text>
+
+  <!-- Chile (estreito vertical) -->
+  <path class="pais" data-p="CHILE" d="M 130 270 L 175 290 L 180 360 L 175 420 L 165 470 L 145 480 L 135 440 L 130 380 L 125 320 Z"/>
+  <text class="pais-label" x="155" y="380">CHI</text>
+
+  <!-- Paraguai -->
+  <path class="pais" data-p="PARAGUAI" d="M 220 295 L 270 290 L 275 325 L 245 335 L 220 325 Z"/>
+  <text class="pais-label" x="248" y="316">PAR</text>
+
+  <!-- Uruguai -->
+  <path class="pais" data-p="URUGUAI" d="M 245 350 L 290 345 L 295 375 L 265 380 L 245 370 Z"/>
+  <text class="pais-label" x="270" y="365">URU</text>
+
+  <!-- Argentina -->
+  <path class="pais" data-p="ARGENTINA" d="M 175 290 L 220 295 L 245 335 L 245 370 L 240 420 L 220 460 L 195 480 L 175 470 L 170 420 L 175 360 Z"/>
+  <text class="pais-label" x="208" y="395">ARG</text>
+
+  <!-- Guiana (Guyana) -->
+  <path class="pais" data-p="GUIANA" d="M 250 60 L 285 65 L 290 85 L 270 90 L 255 80 Z"/>
+  <text class="pais-label" x="270" y="78">GUI</text>
+</svg>
+      <div class="legend">
+        <span>0</span>
+        <div class="legend-bar"></div>
+        <span id="sa_legend_max">—</span>
+      </div>
+    </div>
+
+    <div class="countries-panel">
+      <h2 id="countries_panel_title">Top Países por Faturamento</h2>
+      <table class="countries-table" id="countries_table">
+        <thead>
+          <tr>
+            <th data-k="pais">País</th>
+            <th data-k="cnt" class="num">Pedidos</th>
+            <th data-k="val" class="num">Faturamento</th>
+            <th data-k="pct" class="num">%</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="range-popover" id="range_popover" role="dialog" aria-modal="true">
   <div class="rp-head">
     <button type="button" class="nav-btn" id="rp_prev" aria-label="Anterior">‹</button>
@@ -882,6 +1066,13 @@ const state = {
   vendedor:'',
   excluirPadrao:false, incluirDev:true,
   mapMetric:'val', mapAgg:'uf', tableLimit:500,
+  // Aba ativa do dashboard
+  activeTab:'brasil',
+  // Toggle "Só América do Sul" no tab Exportações
+  saOnly:false,
+  // Estado de ordenação da tabela de países
+  countriesSort:{k:'val',dir:-1},
+  
   tableSort:{k:'data',dir:-1},
   compareYoY:false,
 };
@@ -890,6 +1081,12 @@ const DATA_RANGE = { minY:null, minM:null, minD:null, maxY:null, maxM:null, maxD
 // Helper: retorna a data da linha como YYYYMMDD numérico.
 function rowYMD(r) { const v = r[C.data]; return typeof v === 'number' ? v : +v; }
 function ymdNum(ymd) { return ymd ? (ymd.y*10000 + ymd.m*100 + ymd.d) : 0; }
+// Países da América do Sul (matching exato com os nomes do dataset).
+const SOUTH_AMERICA = new Set([
+  'ARGENTINA','BOLIVIA','CHILE','COLOMBIA','EQUADOR',
+  'GUIANA','PARAGUAI','PERU','URUGUAI','VENEZUELA','BRASIL'
+]);
+
 // Mapeamento UF -> Nome completo do estado.
 const UF_NOME = {
   AC:'Acre', AL:'Alagoas', AM:'Amazonas', AP:'Amapá',
@@ -2408,6 +2605,10 @@ let debounceTimer;
 function renderAll() {
   clearTimeout(debounceTimer);
   debounceTimer=setTimeout(()=>{
+    // Se a aba ativa é Exportações, renderiza também o tab dela
+    if (state.activeTab === 'export') {
+      renderExportTab();
+    }
     const rows=filtered(); const agg=aggregate(rows);
     const comp=filteredComparison();
     const aggComp = comp ? aggregate(comp.rows) : null;
@@ -2606,6 +2807,202 @@ function applyBrOnlyToggle() {
   }
 }
 
+// ===== ABA EXPORTAÇÕES =====
+// Agrega rows de exportação por país (Estado=EX), respeitando filtros não-geográficos.
+function aggregateExports() {
+  const out = {};
+  let totVal = 0, totCnt = 0, totQtd = 0;
+  const clientesGlobal = new Set();
+  for (const r of DATA.orders) {
+    // Aplica os filtros relevantes (período, vendedor, tabela, produto, devolução)
+    if (!state.incluirDev && r[C.tr]===1) continue;
+    if (!inRange(r, state.rangeFrom, state.rangeTo)) continue;
+    if (state.tabelas.size && !state.tabelas.has(r[C.tb])) continue;
+    if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) continue;
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;  // só exportações
+    if (state.produtos.size) {
+      let ok=false; for(const [pi] of r[C.pr]) if(state.produtos.has(pi)){ok=true;break;}
+      if (!ok) continue;
+    }
+    const pais = DATA.paises[r[C.pa]] || '?';
+    if (state.saOnly && !SOUTH_AMERICA.has(pais)) continue;
+    if (!out[pais]) out[pais] = {cnt:0, val:0, qtd:0, clientes:new Set()};
+    if (r[C.tr] !== 1) out[pais].cnt++;
+    out[pais].val += r[C.val];
+    out[pais].qtd += r[C.qtd];
+    out[pais].clientes.add(r[C.cl]);
+    if (r[C.tr] !== 1) { totCnt++; clientesGlobal.add(r[C.cl]); }
+    totVal += r[C.val];
+    totQtd += r[C.qtd];
+  }
+  return { porPais: out, totVal, totCnt, totQtd, totClientes: clientesGlobal.size };
+}
+
+function renderExportKPIs(eAgg) {
+  const c = document.getElementById('export_kpis');
+  const numPaises = Object.keys(eAgg.porPais).length;
+  const tk = eAgg.totCnt > 0 ? (eAgg.totVal / eAgg.totCnt) : 0;
+  c.innerHTML =
+    '<div class="kpi-card">'
+    + '<div class="kpi-label">Faturamento Export</div>'
+    + '<div class="kpi-value">' + fmtMoneyShort(eAgg.totVal) + '</div>'
+    + '<div class="kpi-sub">' + fmtMoney(eAgg.totVal).replace('R$ ','R$') + '</div>'
+    + '</div>'
+    + '<div class="kpi-card">'
+    + '<div class="kpi-label">Pedidos</div>'
+    + '<div class="kpi-value">' + fmtInt(eAgg.totCnt) + '</div>'
+    + '<div class="kpi-sub">' + numPaises + ' país(es)</div>'
+    + '</div>'
+    + '<div class="kpi-card">'
+    + '<div class="kpi-label">Clientes Únicos</div>'
+    + '<div class="kpi-value">' + fmtInt(eAgg.totClientes) + '</div>'
+    + '<div class="kpi-sub">no recorte ativo</div>'
+    + '</div>'
+    + '<div class="kpi-card">'
+    + '<div class="kpi-label">Ticket Médio</div>'
+    + '<div class="kpi-value">' + fmtMoneyShort(tk) + '</div>'
+    + '<div class="kpi-sub">por pedido</div>'
+    + '</div>'
+    + '<div class="kpi-card">'
+    + '<div class="kpi-label">Unidades</div>'
+    + '<div class="kpi-value">' + fmtInt(Math.round(eAgg.totQtd)) + '</div>'
+    + '<div class="kpi-sub">itens vendidos</div>'
+    + '</div>';
+}
+
+function renderSAMap(eAgg) {
+  // Aplica cor a cada país do SVG; brazil-home é cinza fixo (matriz).
+  const svg = document.getElementById('sa_map');
+  if (!svg) return;
+  const STOPS = [
+    {at:0.00, c:[26,26,26]},
+    {at:0.10, c:[60,12,12]},
+    {at:0.25, c:[127,29,29]},
+    {at:0.45, c:[185,28,28]},
+    {at:0.65, c:[220,38,38]},
+    {at:0.85, c:[239,68,68]},
+    {at:1.00, c:[251,146,60]}
+  ];
+  function heatColor(t) {
+    t = Math.sqrt(Math.max(0, Math.min(1, t)));
+    for (let i=1; i<STOPS.length; i++) {
+      if (t <= STOPS[i].at) {
+        const a = STOPS[i-1], b = STOPS[i];
+        const k = (t - a.at) / (b.at - a.at || 1);
+        return [Math.round(a.c[0]+(b.c[0]-a.c[0])*k),
+                Math.round(a.c[1]+(b.c[1]-a.c[1])*k),
+                Math.round(a.c[2]+(b.c[2]-a.c[2])*k)];
+      }
+    }
+    return STOPS[STOPS.length-1].c;
+  }
+  // Max entre os países da AS no SVG
+  let max = 0;
+  svg.querySelectorAll('.pais').forEach(p => {
+    const pais = p.dataset.p;
+    if (pais === 'BRASIL') return;  // matriz não conta
+    const v = eAgg.porPais[pais] ? eAgg.porPais[pais].val : 0;
+    if (v > max) max = v;
+  });
+  svg.querySelectorAll('.pais').forEach(p => {
+    const pais = p.dataset.p;
+    if (pais === 'BRASIL') return;
+    const v = eAgg.porPais[pais] ? eAgg.porPais[pais].val : 0;
+    const t = max ? v / max : 0;
+    const c = heatColor(t);
+    p.setAttribute('fill', 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')');
+    // Tooltip via title (simples, mas funcional)
+    let title = p.querySelector('title');
+    if (!title) {
+      title = document.createElementNS('http://www.w3.org/2000/svg','title');
+      p.appendChild(title);
+    }
+    if (v > 0) {
+      const info = eAgg.porPais[pais];
+      title.textContent = pais + ' — ' + fmtMoney(v) + ' · ' + fmtInt(info.cnt) + ' pedidos · ' + info.clientes.size + ' cliente(s)';
+    } else {
+      title.textContent = pais + ' — sem vendas no recorte';
+    }
+  });
+  document.getElementById('sa_legend_max').textContent = fmtMoneyShort(max);
+  document.getElementById('sa_map_summary').textContent =
+    state.saOnly ? 'Apenas América do Sul' : 'Mundo todo (mapa só visualiza AS)';
+}
+
+function renderCountriesTable(eAgg) {
+  const arr = Object.entries(eAgg.porPais).map(([pais, d]) => ({
+    pais, cnt: d.cnt, val: d.val, qtd: d.qtd, clientes: d.clientes.size,
+    pct: eAgg.totVal > 0 ? (d.val / eAgg.totVal * 100) : 0,
+    isSA: SOUTH_AMERICA.has(pais)
+  }));
+  const k = state.countriesSort.k, dir = state.countriesSort.dir;
+  arr.sort((a,b) => {
+    let av, bv;
+    if (k === 'pais') { av = a.pais; bv = b.pais; }
+    else { av = a[k]; bv = b[k]; }
+    if (typeof av === 'string') return dir * av.localeCompare(bv);
+    return dir * (av - bv);
+  });
+  const tbody = document.querySelector('#countries_table tbody');
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted)">Sem exportações no recorte.</td></tr>';
+  } else {
+    const max = Math.max.apply(null, arr.map(x => x.val));
+    tbody.innerHTML = arr.map(x => {
+      const w = Math.max(2, Math.round(x.val / max * 80));
+      return '<tr data-pais="' + escHtml(x.pais) + '" class="' + (x.isSA?'sa-flag':'') + '">'
+        + '<td><span class="country-bar" style="width:' + w + 'px"></span>' + escHtml(x.pais) + '</td>'
+        + '<td class="num">' + fmtInt(x.cnt) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+        + '<td class="num">' + x.pct.toFixed(1).replace('.',',') + '%</td>'
+        + '</tr>';
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.onclick = () => {
+        // Click num país: destaca no SVG e mostra tooltip
+        document.querySelectorAll('#sa_map .pais').forEach(p => p.classList.remove('selected'));
+        const pais = tr.dataset.pais;
+        const path = document.querySelector('#sa_map .pais[data-p="' + pais + '"]');
+        if (path) path.classList.add('selected');
+      };
+    });
+  }
+  // Headers de ordenação
+  document.querySelectorAll('#countries_table th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.k === k);
+    th.dataset.arrow = th.dataset.k === k ? (dir === -1 ? '\u25bc' : '\u25b2') : '';
+  });
+  document.getElementById('countries_panel_title').textContent =
+    state.saOnly ? 'Países América do Sul (' + arr.length + ')' : 'Top Países (' + arr.length + ')';
+}
+
+function renderExportTab() {
+  const eAgg = aggregateExports();
+  renderExportKPIs(eAgg);
+  renderSAMap(eAgg);
+  renderCountriesTable(eAgg);
+  // Atualiza badge na tab
+  const c = document.getElementById('tab_export_count');
+  if (c) c.textContent = fmtInt(eAgg.totCnt) + ' pedidos';
+}
+
+function switchTab(tab) {
+  state.activeTab = tab;
+  const tabBrasil = document.getElementById('tab_brasil');
+  const tabExport = document.getElementById('tab_export');
+  document.querySelectorAll('#tabs_bar button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  if (tab === 'brasil') {
+    if (tabBrasil) tabBrasil.style.display = '';
+    if (tabExport) tabExport.classList.remove('active');
+  } else {
+    if (tabBrasil) tabBrasil.style.display = 'none';
+    if (tabExport) tabExport.classList.add('active');
+    renderExportTab();
+  }
+}
+
 // ===== INIT =====
 function init() {
   // Exibe o app ANTES de criar os charts — Chart.js precisa medir o
@@ -2654,6 +3051,47 @@ function init() {
   if (btnAZ) btnAZ.onclick = openClientsAZModal;
   const btnEst = document.getElementById('btn_ver_estados');
   if (btnEst) btnEst.onclick = openEstadosModal;
+
+  // Tabs Brasil/Exportações
+  document.querySelectorAll('#tabs_bar button').forEach(function(b) {
+    b.onclick = function() { switchTab(b.dataset.tab); };
+  });
+  // Toggle "Só América do Sul"
+  const saT = document.getElementById('sa_only_toggle');
+  if (saT) {
+    saT.onclick = function() {
+      state.saOnly = !state.saOnly;
+      saT.classList.toggle('active', state.saOnly);
+      saT.textContent = state.saOnly ? '✓ Apenas América do Sul' : 'Apenas América do Sul';
+      renderExportTab();
+    };
+  }
+  // Sort da tabela de países
+  document.querySelectorAll('#countries_table th').forEach(function(th) {
+    th.onclick = function() {
+      const k = th.dataset.k;
+      if (state.countriesSort.k === k) state.countriesSort.dir *= -1;
+      else { state.countriesSort.k = k; state.countriesSort.dir = (k === 'pais') ? 1 : -1; }
+      renderExportTab();
+    };
+  });
+  // Click num país do SVG: filtra a tabela (destaca no painel)
+  document.querySelectorAll('#sa_map .pais').forEach(function(p) {
+    p.addEventListener('click', function() {
+      const pais = p.dataset.p;
+      if (pais === 'BRASIL') return;
+      // Toggle highlight
+      document.querySelectorAll('#sa_map .pais').forEach(function(x) { x.classList.remove('selected'); });
+      p.classList.add('selected');
+      // Scroll/destaca a linha correspondente
+      const tr = document.querySelector('#countries_table tr[data-pais="' + pais + '"]');
+      if (tr) {
+        document.querySelectorAll('#countries_table tr').forEach(function(r) { r.style.background = ''; });
+        tr.style.background = 'var(--table-row-hover)';
+        tr.scrollIntoView({behavior:'smooth', block:'nearest'});
+      }
+    });
+  });
   const meSearch = document.getElementById('me_search');
   if (meSearch) meSearch.oninput = renderEstadosModal;
   document.querySelectorAll('#me_table th').forEach(function(th) {

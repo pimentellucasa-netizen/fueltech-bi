@@ -291,20 +291,22 @@
 
       <div class="panel">
         <h2>
-          <span>Top Países LATAM</span>
+          <span id="paises_title">Top Países LATAM</span>
           <span class="info" id="paises_info"></span>
         </h2>
-        <table id="tb_paises">
-          <thead>
-            <tr>
-              <th data-k="pais">País</th>
-              <th data-k="cnt" class="num">Pedidos</th>
-              <th data-k="val" class="num">Faturamento</th>
-              <th data-k="pct" class="num">%</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div style="max-height:560px; overflow-y:auto">
+          <table id="tb_paises">
+            <thead id="tb_paises_thead">
+              <tr>
+                <th data-k="pais">País</th>
+                <th data-k="cnt" class="num">Pedidos</th>
+                <th data-k="val" class="num">Faturamento</th>
+                <th data-k="pct" class="num">%</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -727,7 +729,32 @@ function setupMapTooltip() {
 }
 
 let _paisesSort = { k:'val', dir:-1 };
+let _pedidosSort = { k:'data', dir:-1 };
+
 function renderTabPaises(agg) {
+  // Se há país selecionado: mostrar pedidos individuais daquele país
+  if (state.selectedPais) {
+    return renderPedidosDoPais(state.selectedPais, agg);
+  }
+  // Modo padrão: tabela de top países
+  document.getElementById('paises_title').textContent = 'Top Países LATAM';
+  document.getElementById('tb_paises_thead').innerHTML =
+    '<tr>'
+    + '<th data-k="pais">País</th>'
+    + '<th data-k="cnt" class="num">Pedidos</th>'
+    + '<th data-k="val" class="num">Faturamento</th>'
+    + '<th data-k="pct" class="num">%</th>'
+    + '</tr>';
+  // Re-bind sort handler nos novos headers
+  document.querySelectorAll('#tb_paises_thead th').forEach(function(th) {
+    th.onclick = function() {
+      const k = th.dataset.k;
+      if (_paisesSort.k === k) _paisesSort.dir *= -1;
+      else { _paisesSort.k = k; _paisesSort.dir = (k === 'pais') ? 1 : -1; }
+      renderAll();
+    };
+  });
+
   const arr = Object.entries(agg.porPais).map(function(e) {
     return { pais:e[0], cnt:e[1].cnt, val:e[1].val,
       pct: agg.totVal > 0 ? (e[1].val / agg.totVal * 100) : 0 };
@@ -769,6 +796,132 @@ function renderTabPaises(agg) {
     });
   }
   document.getElementById('paises_info').textContent = arr.length + ' país(es)';
+}
+
+// === Pedidos individuais do país selecionado ===
+function renderPedidosDoPais(pais, agg) {
+  // Atualiza título e header
+  document.getElementById('paises_title').innerHTML =
+    'Pedidos — <span style="color:var(--orange)">' + escHtml(pais) + '</span> '
+    + '<button id="back_to_paises" style="margin-left:10px;background:transparent;'
+    + 'border:1px solid var(--border);color:var(--muted);padding:3px 10px;'
+    + 'border-radius:12px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:600">← Voltar</button>';
+  document.getElementById('tb_paises_thead').innerHTML =
+    '<tr>'
+    + '<th data-k="data">Data</th>'
+    + '<th data-k="nf">NF</th>'
+    + '<th data-k="cliente">Cliente</th>'
+    + '<th data-k="qtd" class="num">Qtd</th>'
+    + '<th data-k="val" class="num">Valor</th>'
+    + '</tr>';
+
+  // Coleta pedidos individuais (NFs únicas) do país no recorte
+  const fromN = state.rangeFrom ? +state.rangeFrom : 0;
+  const toN = state.rangeTo ? +state.rangeTo : 99999999;
+  const porNF = {};
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    const isDev = r[C.tr] === 1;
+    if (!state.incluirDev && isDev) continue;
+    if ((DATA.paises[r[C.pa]] || '?') !== pais) continue;
+    if (state.tabelas.size && !state.tabelas.has(r[C.tb])) continue;
+    if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) continue;
+    const cliR = DATA.clients[r[C.cl]] || ['','',''];
+    if (state.excluirPadrao && cliR[1] === 'CLIENTE PADRAO') continue;
+    if (state.cd && !((cliR[0]||'').includes(state.cd))) continue;
+    if (state.nome) {
+      const n = state.nome.toLowerCase();
+      const nc = (cliR[1]||'').toLowerCase();
+      const nf = (cliR[2]||'').toLowerCase();
+      if (!nc.includes(n) && !nf.includes(n)) continue;
+    }
+    if (state.produtos.size) {
+      let ok = false;
+      for (const [pi] of r[C.pr]) if (state.produtos.has(pi)) { ok = true; break; }
+      if (!ok) continue;
+    }
+    const dt = +r[C.data];
+    if (dt < fromN || dt > toN) continue;
+
+    const nfKey = r[C.nf];
+    if (!porNF[nfKey]) {
+      porNF[nfKey] = {
+        data: r[C.data], nf: r[C.nf], cli: r[C.cl],
+        cliNome: cliR[1] || '—', cliCd: cliR[0] || '',
+        val: 0, qtd: 0, isDev: isDev
+      };
+    }
+    porNF[nfKey].val += r[C.val];
+    porNF[nfKey].qtd += r[C.qtd];
+  }
+  const pedidos = Object.values(porNF);
+
+  // Sort
+  const k = _pedidosSort.k, dir = _pedidosSort.dir;
+  pedidos.sort(function(a,b) {
+    let av, bv;
+    if (k === 'cliente') { av = a.cliNome; bv = b.cliNome; }
+    else { av = a[k]; bv = b[k]; }
+    if (typeof av === 'string') return dir * av.localeCompare(bv);
+    return dir * (av - bv);
+  });
+
+  // Marca header com seta
+  document.querySelectorAll('#tb_paises_thead th').forEach(function(th) {
+    if (th.dataset.k === k) th.textContent += (dir === -1 ? ' ▼' : ' ▲');
+    th.onclick = function() {
+      const kk = th.dataset.k;
+      if (_pedidosSort.k === kk) _pedidosSort.dir *= -1;
+      else {
+        _pedidosSort.k = kk;
+        _pedidosSort.dir = (kk === 'cliente' || kk === 'nf') ? 1 : -1;
+      }
+      renderAll();
+    };
+  });
+
+  function fmtData(s) {
+    s = String(s);
+    if (s.length === 8) return s.slice(6,8) + '/' + s.slice(4,6) + '/' + s.slice(0,4);
+    return s;
+  }
+
+  const tbody = document.querySelector('#tb_paises tbody');
+  if (!pedidos.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">Sem pedidos para ' + escHtml(pais) + ' no recorte.</td></tr>';
+  } else {
+    tbody.innerHTML = pedidos.map(function(p) {
+      const devTag = p.isDev ? ' <span style="font-size:9px;color:#ef4444;font-weight:700">[DEV]</span>' : '';
+      return '<tr data-cli="' + p.cli + '">'
+        + '<td>' + fmtData(p.data) + '</td>'
+        + '<td><span style="font-family:monospace;font-size:11px;color:var(--muted)">' + escHtml(p.nf) + '</span>' + devTag + '</td>'
+        + '<td><strong>' + escHtml(p.cliNome) + '</strong>'
+          + (p.cliCd ? ' <span style="color:var(--muted);font-size:10px">' + escHtml(p.cliCd) + '</span>' : '')
+          + '</td>'
+        + '<td class="num">' + fmtInt(Math.round(p.qtd)) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(p.val) + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // Atualiza info: total de pedidos + valor total
+  let total = 0;
+  for (const p of pedidos) total += p.val;
+  document.getElementById('paises_info').textContent =
+    pedidos.length + ' pedido(s) · ' + fmtMoneyShort(total);
+
+  // Botão voltar
+  const back = document.getElementById('back_to_paises');
+  if (back) {
+    back.onclick = function(ev) {
+      ev.stopPropagation();
+      state.selectedPais = null;
+      state.paises.clear();
+      renderChips();
+      renderAll();
+    };
+  }
 }
 
 let charts = {};
@@ -878,163 +1031,4 @@ function renderChips() {
       const v = +ch.dataset.v;
       if (state.tabelas.has(v)) state.tabelas.delete(v);
       else state.tabelas.add(v);
-      renderChips();
-      renderAll();
-    };
-  });
-  const sp = document.getElementById('selected_prods');
-  sp.innerHTML = Array.from(state.produtos).map(function(pi) {
-    return '<span class="chip" data-pi="' + pi + '">' + escHtml(DATA.produtos[pi].substring(0,20)) + ' <span class="x">×</span></span>';
-  }).join('');
-  sp.querySelectorAll('.chip').forEach(function(ch) {
-    ch.onclick = function() {
-      state.produtos.delete(+ch.dataset.pi);
-      renderChips();
-      renderAll();
-    };
-  });
-}
-
-let _renderTimer;
-function renderAll() {
-  clearTimeout(_renderTimer);
-  _renderTimer = setTimeout(function() {
-    const agg = aggregate();
-    renderKPIs(agg);
-    renderMap(agg);
-    renderTabPaises(agg);
-    renderTimeline(agg);
-    renderProdutos(agg);
-    renderClientes(agg);
-  }, 30);
-}
-
-function init() {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('app').style.display = '';
-
-  let minD = '99999999', maxD = '00000000';
-  for (let i = 0; i < DATA.orders.length; i++) {
-    const r = DATA.orders[i];
-    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
-    const d = String(r[C.data]);
-    if (d < minD) minD = d;
-    if (d > maxD) maxD = d;
-  }
-  DATA_RANGE.min = minD; DATA_RANGE.max = maxD;
-  state.rangeFrom = minD; state.rangeTo = maxD;
-  document.getElementById('f_from').value = ymdToISO(minD);
-  document.getElementById('f_to').value = ymdToISO(maxD);
-  document.getElementById('f_from').min = ymdToISO(minD);
-  document.getElementById('f_from').max = ymdToISO(maxD);
-  document.getElementById('f_to').min = ymdToISO(minD);
-  document.getElementById('f_to').max = ymdToISO(maxD);
-
-  const usedVendedores = new Set();
-  for (let i = 0; i < DATA.orders.length; i++) {
-    const r = DATA.orders[i];
-    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
-    if (r[C.vd] >= 0) usedVendedores.add(r[C.vd]);
-  }
-  const vdSel = document.getElementById('f_vd');
-  Array.from(usedVendedores).sort(function(a,b){return DATA.vendedores[a].localeCompare(DATA.vendedores[b]);}).forEach(function(idx) {
-    const opt = document.createElement('option');
-    opt.value = idx; opt.textContent = DATA.vendedores[idx];
-    vdSel.appendChild(opt);
-  });
-
-  renderChips();
-
-  document.getElementById('f_nome').oninput = function(e) {
-    state.nome = e.target.value.trim();
-    if (state.nome !== state.nomeAutoFromCd) state.nomeAutoFromCd = '';
-    renderAll();
-  };
-  document.getElementById('f_cd').oninput = function(e) {
-    state.cd = e.target.value.trim();
-    syncCdMatch();
-    renderAll();
-  };
-  document.getElementById('f_from').onchange = function(e) {
-    state.rangeFrom = isoToYMD(e.target.value) || DATA_RANGE.min;
-    state.quickRange = 'custom';
-    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
-    renderAll();
-  };
-  document.getElementById('f_to').onchange = function(e) {
-    state.rangeTo = isoToYMD(e.target.value) || DATA_RANGE.max;
-    state.quickRange = 'custom';
-    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
-    renderAll();
-  };
-  document.querySelectorAll('#quick_ranges button').forEach(function(b) {
-    b.onclick = function() { applyQuickRange(b.dataset.q); renderAll(); };
-  });
-  vdSel.onchange = function(e) { state.vendedor = e.target.value; renderAll(); };
-  document.getElementById('f_incl_dev').onchange = function(e) { state.incluirDev = e.target.checked; renderAll(); };
-  document.getElementById('f_excl_padrao').onchange = function(e) { state.excluirPadrao = e.target.checked; renderAll(); };
-
-  const prodInp = document.getElementById('f_prod_search');
-  const prodRes = document.getElementById('prod_results');
-  prodInp.oninput = function() {
-    const q = prodInp.value.toLowerCase().trim();
-    if (q.length < 2) { prodRes.classList.remove('open'); return; }
-    const matches = [];
-    for (let i = 0; i < DATA.produtos.length; i++) {
-      if (DATA.produtos[i].toLowerCase().indexOf(q) >= 0) matches.push(i);
-      if (matches.length >= 30) break;
-    }
-    prodRes.innerHTML = matches.map(function(pi) {
-      return '<div data-pi="' + pi + '">' + escHtml(DATA.produtos[pi]) + '</div>';
-    }).join('') || '<div style="color:var(--muted)">Nenhum produto encontrado</div>';
-    prodRes.classList.add('open');
-    prodRes.querySelectorAll('div[data-pi]').forEach(function(d) {
-      d.onclick = function() {
-        state.produtos.add(+d.dataset.pi);
-        prodInp.value = ''; prodRes.classList.remove('open');
-        renderChips(); renderAll();
-      };
-    });
-  };
-  prodInp.onblur = function() { setTimeout(function() { prodRes.classList.remove('open'); }, 200); };
-
-  document.querySelectorAll('#tb_paises th').forEach(function(th) {
-    th.onclick = function() {
-      const k = th.dataset.k;
-      if (_paisesSort.k === k) _paisesSort.dir *= -1;
-      else { _paisesSort.k = k; _paisesSort.dir = (k === 'pais') ? 1 : -1; }
-      renderAll();
-    };
-  });
-
-  document.getElementById('btn_reset').onclick = function() {
-    state.nome=''; state.cd=''; state.nomeAutoFromCd='';
-    state.paises.clear(); state.tabelas.clear(); state.produtos.clear();
-    state.vendedor=''; state.incluirDev=true; state.excluirPadrao=false;
-    state.selectedPais = null;
-    document.getElementById('f_nome').value = '';
-    document.getElementById('f_cd').value = '';
-    document.getElementById('f_vd').value = '';
-    document.getElementById('f_incl_dev').checked = true;
-    document.getElementById('f_excl_padrao').checked = false;
-    document.getElementById('f_prod_search').value = '';
-    syncCdMatch();
-    applyQuickRange('all');
-    renderChips();
-    renderAll();
-  };
-
-  buildMap();
-  setupMapTooltip();
-  renderAll();
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  setTimeout(init, 30);
-}
-</script>
-</body>
-</html>
-  for (l
+ 

@@ -158,6 +158,19 @@
     padding-left:2px;line-height:1.4;display:none}
   .rp-compare #f_compare_info.visible{display:block}
   .rp-compare #f_compare_info .range-label{color:var(--orange);font-weight:600}
+  .rp-inputs{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .rp-input-pair{display:flex;flex-direction:column;gap:2px}
+  .rp-input-pair label{font-size:9px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:.5px}
+  .rp-date-input{padding:7px 9px;background:var(--input-bg);
+    border:1px solid var(--input-border);color:var(--text);
+    border-radius:var(--radius-sm);font-size:12px;font-family:inherit;
+    color-scheme:dark;width:140px}
+  :root[data-theme="light"] .rp-date-input{color-scheme:light}
+  .rp-date-input:focus{outline:none;border-color:var(--orange);
+    box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+  .rp-inputs .rp-info{flex:1;font-size:11px;color:var(--muted);text-align:right}
   .rp-footer{display:flex;gap:8px;margin-top:10px;padding-top:10px;
     border-top:1px solid var(--border);align-items:center}
   .rp-info{flex:1;font-size:11px;color:var(--muted);line-height:1.3}
@@ -732,8 +745,18 @@
     </label>
     <div id="f_compare_info"></div>
   </div>
-  <div class="rp-footer">
+  <div class="rp-inputs">
+    <div class="rp-input-pair">
+      <label for="rp_from_input">De</label>
+      <input type="date" id="rp_from_input" class="rp-date-input">
+    </div>
+    <div class="rp-input-pair">
+      <label for="rp_to_input">Até</label>
+      <input type="date" id="rp_to_input" class="rp-date-input">
+    </div>
     <div class="rp-info" id="rp_info"></div>
+  </div>
+  <div class="rp-footer">
     <button type="button" id="rp_cancel">Cancelar</button>
     <button type="button" id="rp_apply" class="primary">Aplicar</button>
   </div>
@@ -1424,8 +1447,9 @@ function buildTimelineMonthly(agg, aggComp) {
 }
 
 function renderTimeline(agg, aggComp) {
-  // Modo diário cobre recortes de até ~3 meses (92 dias). Acima disso, mensal.
-  const useDaily = rangeDays() <= 92;
+  // Modo diário cobre recortes de até ~6 meses (184 dias). Acima disso, mensal.
+  // Período menor exige granularidade fina — 3 barras mensais não dizem muito.
+  const useDaily = rangeDays() <= 184;
   // Atualiza título do painel conforme o modo
   const titleEl = document.getElementById('timeline_title');
   if (titleEl) {
@@ -2075,14 +2099,35 @@ function pickDay(ymd) {
   renderCalendar();
 }
 
+function ymdToISO(ymd) {
+  if (!ymd) return '';
+  return ymd.y + '-' + String(ymd.m).padStart(2,'0') + '-' + String(ymd.d).padStart(2,'0');
+}
+function isoToYMD(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [y,m,d] = iso.split('-').map(n => parseInt(n,10));
+  if (!y || !m || !d) return null;
+  return { y, m, d };
+}
 function updateCalInfo() {
   const info = document.getElementById('rp_info');
-  const fmt = ymd => ymd ? `<strong>${String(ymd.d).padStart(2,'0')}/${MONTHS[ymd.m-1]}/${ymd.y}</strong>` : '<em>—</em>';
+  const fromInp = document.getElementById('rp_from_input');
+  const toInp = document.getElementById('rp_to_input');
+  if (fromInp) fromInp.value = ymdToISO(CAL.pendingFrom);
+  if (toInp) toInp.value = ymdToISO(CAL.pendingTo);
+  // Limites min/max conforme dataset
+  if (fromInp && DATA_RANGE.minY) {
+    fromInp.min = DATA_RANGE.minY + '-' + String(DATA_RANGE.minM).padStart(2,'0') + '-' + String(DATA_RANGE.minD).padStart(2,'0');
+    fromInp.max = DATA_RANGE.maxY + '-' + String(DATA_RANGE.maxM).padStart(2,'0') + '-' + String(DATA_RANGE.maxD).padStart(2,'0');
+    toInp.min = fromInp.min;
+    toInp.max = fromInp.max;
+  }
+  const fmt = ymd => ymd ? '<strong>' + String(ymd.d).padStart(2,'0') + '/' + MONTHS[ymd.m-1] + '/' + ymd.y + '</strong>' : '<em>—</em>';
   if (!CAL.pendingFrom) info.innerHTML = 'Selecione a <strong>data inicial</strong>';
-  else if (!CAL.pendingTo) info.innerHTML = `De ${fmt(CAL.pendingFrom)} — selecione a <strong>data final</strong>`;
+  else if (!CAL.pendingTo) info.innerHTML = 'De ' + fmt(CAL.pendingFrom) + ' — selecione a <strong>data final</strong>';
   else {
     const days = Math.round((new Date(CAL.pendingTo.y, CAL.pendingTo.m-1, CAL.pendingTo.d) - new Date(CAL.pendingFrom.y, CAL.pendingFrom.m-1, CAL.pendingFrom.d))/86400000) + 1;
-    info.innerHTML = `${fmt(CAL.pendingFrom)} → ${fmt(CAL.pendingTo)} · ${days} dia${days===1?'':'s'}`;
+    info.innerHTML = fmt(CAL.pendingFrom) + ' → ' + fmt(CAL.pendingTo) + ' · ' + days + ' dia' + (days===1?'':'s');
   }
 }
 function updateApplyBtn() {
@@ -2490,6 +2535,45 @@ function init() {
   document.getElementById('rp_next').onclick  = () => navCalendar(1);
   document.getElementById('rp_title').onclick = zoomOutCalendar;
   document.getElementById('rp_cancel').onclick = closeCalendar;
+  // Inputs manuais de data
+  function applyDateInputChange() {
+    const fromInp = document.getElementById('rp_from_input');
+    const toInp = document.getElementById('rp_to_input');
+    const f = isoToYMD(fromInp.value);
+    const t = isoToYMD(toInp.value);
+    if (f) {
+      const minN = ymdNum({y:DATA_RANGE.minY,m:DATA_RANGE.minM,d:DATA_RANGE.minD});
+      const maxN = ymdNum({y:DATA_RANGE.maxY,m:DATA_RANGE.maxM,d:DATA_RANGE.maxD});
+      const fN = ymdNum(f);
+      if (fN >= minN && fN <= maxN) {
+        CAL.pendingFrom = f;
+        if (CAL.pendingTo && ymdNum(CAL.pendingTo) < fN) CAL.pendingTo = null;
+        CAL.viewY = f.y; CAL.viewM = f.m;
+      }
+    } else if (fromInp.value === '') {
+      CAL.pendingFrom = null;
+    }
+    if (t) {
+      const minN = ymdNum({y:DATA_RANGE.minY,m:DATA_RANGE.minM,d:DATA_RANGE.minD});
+      const maxN = ymdNum({y:DATA_RANGE.maxY,m:DATA_RANGE.maxM,d:DATA_RANGE.maxD});
+      const tN = ymdNum(t);
+      if (tN >= minN && tN <= maxN) {
+        if (!CAL.pendingFrom || ymdNum(CAL.pendingFrom) <= tN) {
+          CAL.pendingTo = t;
+        }
+      }
+    } else if (toInp.value === '') {
+      CAL.pendingTo = null;
+    }
+    CAL.picking = CAL.pendingFrom && !CAL.pendingTo ? 'to' : 'from';
+    renderCalendar();
+    updateApplyBtn();
+  }
+  const rpFromInp = document.getElementById('rp_from_input');
+  const rpToInp = document.getElementById('rp_to_input');
+  if (rpFromInp) rpFromInp.onchange = applyDateInputChange;
+  if (rpToInp) rpToInp.onchange = applyDateInputChange;
+
   document.getElementById('rp_apply').onclick = () => {
     if (!CAL.pendingFrom) return;
     if (!CAL.pendingTo) CAL.pendingTo = {...CAL.pendingFrom};

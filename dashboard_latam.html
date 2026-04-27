@@ -12,7 +12,9 @@
     --card:#1a1a1a; --card-hover:#1f1f1f;
     --card-grad:linear-gradient(135deg,#1a1a1a 0%,#1e1e1e 100%);
     --border:#2a2a2a; --border-strong:#3a3a3a;
+    --input-bg:#0a0a0a; --input-border:#2a2a2a;
     --text:#fff; --text-soft:#e8e8e8; --muted:#9a9a9a;
+    --chip-bg:#1a1a1a;
     --radius:8px; --radius-sm:6px;
   }
   *{box-sizing:border-box}
@@ -20,8 +22,8 @@
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     background:var(--bg); color:var(--text); font-size:13px}
   header{background:#000; padding:14px 24px; border-bottom:3px solid var(--orange);
-    display:flex; align-items:center; gap:16px}
-  header h1{margin:0; font-size:18px; font-weight:700; letter-spacing:.5px; color:#fff}
+    display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:50}
+  header h1{margin:0; font-size:18px; font-weight:700; letter-spacing:.5px}
   header h1 .accent{background:linear-gradient(135deg,var(--orange) 0%,var(--orange-2) 100%);
     -webkit-background-clip:text; -webkit-text-fill-color:transparent}
   header .sub{color:#aaa; font-size:12px; margin-left:auto}
@@ -30,20 +32,81 @@
     transition:all .15s}
   header a.back:hover{color:var(--orange); border-color:var(--orange)}
 
-  .container{padding:18px 24px; max-width:1600px; margin:0 auto}
+  .layout{display:grid; grid-template-columns:280px 1fr; min-height:calc(100vh - 60px)}
+  aside{background:var(--bg-alt); border-right:1px solid var(--border); padding:18px;
+    overflow-y:auto; max-height:calc(100vh - 60px); position:sticky; top:60px}
+  aside h3{font-size:11px; text-transform:uppercase; color:var(--orange);
+    margin:14px 0 8px; letter-spacing:1.2px; font-weight:700;
+    padding-bottom:4px; border-bottom:1px solid var(--border)}
+  aside h3:first-child{margin-top:0}
+  .filter-group{margin-bottom:12px}
+  .filter-group label{display:block; font-size:11px; color:var(--muted);
+    margin-bottom:4px; font-weight:500}
+  .filter-group input, .filter-group select{width:100%; padding:8px 10px;
+    background:var(--input-bg); border:1px solid var(--input-border);
+    color:var(--text); border-radius:var(--radius-sm); font-size:12px}
+  .filter-group input:focus, .filter-group select:focus{outline:none;
+    border-color:var(--orange); box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+  .quick-ranges{display:grid; grid-template-columns:repeat(4,1fr); gap:4px}
+  .quick-ranges button{padding:6px 4px; background:var(--chip-bg);
+    border:1px solid var(--border); color:var(--text-soft); font-size:10px;
+    cursor:pointer; border-radius:4px; font-family:inherit; font-weight:600;
+    transition:all .12s}
+  .quick-ranges button:hover{border-color:var(--orange); color:var(--orange)}
+  .quick-ranges button.active{background:var(--orange); color:#000; border-color:var(--orange)}
+  .chips{display:flex; flex-wrap:wrap; gap:4px; max-height:140px; overflow-y:auto}
+  .chip{font-size:11px; padding:4px 10px; background:var(--chip-bg);
+    border:1px solid var(--border); color:var(--text-soft); border-radius:14px;
+    cursor:pointer; user-select:none; transition:all .12s}
+  .chip:hover{border-color:var(--orange); color:var(--orange)}
+  .chip.active{background:linear-gradient(135deg,var(--orange) 0%,var(--orange-2) 100%);
+    color:#000; border-color:var(--orange); font-weight:700}
+  .cd-match{display:none; margin-top:6px; padding:6px 9px; font-size:11px;
+    background:rgba(0,200,83,.08); border:1px solid rgba(0,200,83,.3);
+    border-left:3px solid var(--green); border-radius:var(--radius-sm);
+    color:var(--text-soft)}
+  .cd-match.active{display:block}
+  .cd-match.miss{background:rgba(229,57,53,.08); border-color:rgba(229,57,53,.3);
+    border-left-color:#E53935}
+  .cd-match .tag{font-size:9px; font-weight:700; color:var(--green);
+    text-transform:uppercase; letter-spacing:.5px; margin-right:5px}
+  .cd-match.miss .tag{color:#E53935}
+  .cd-match .name{font-weight:600; color:var(--text)}
+  .produto-search{position:relative}
+  .produto-search .results{display:none; position:absolute; top:100%; left:0; right:0;
+    background:#0a0a0a; border:1px solid var(--orange); border-radius:4px;
+    z-index:30; max-height:240px; overflow-y:auto; margin-top:2px}
+  .produto-search .results.open{display:block}
+  .produto-search .results > div{padding:7px 10px; cursor:pointer; font-size:11px;
+    border-bottom:1px solid #1f1f1f}
+  .produto-search .results > div:hover{background:rgba(220,38,38,.15); color:var(--orange)}
+  .selected-prods{display:flex; flex-wrap:wrap; gap:4px; margin-top:6px}
+  .selected-prods .chip{font-size:10px; background:var(--orange); color:#000;
+    border-color:var(--orange); font-weight:700}
+  .selected-prods .chip .x{margin-left:5px; font-weight:800; cursor:pointer}
+  .btn-reset{width:100%; padding:10px; margin-top:14px;
+    background:linear-gradient(135deg,var(--orange) 0%,var(--orange-2) 100%);
+    color:#000; border:none; border-radius:var(--radius-sm); cursor:pointer;
+    font-size:12px; font-weight:700; letter-spacing:.3px}
+
+  /* Toggle */
+  .toggle-row{display:flex; align-items:center; gap:8px; padding:6px 0; cursor:pointer}
+  .toggle-row input{width:auto; margin:0}
+
+  /* Main */
+  main{padding:18px 24px; overflow-x:hidden}
 
   /* KPIs */
   .kpi-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
     gap:12px; margin-bottom:16px}
   .kpi-card{background:var(--card-grad); border:1px solid var(--border);
     border-left:3px solid var(--orange); border-radius:var(--radius); padding:14px}
-  .kpi-card .kpi-label{font-size:10px; color:var(--muted);
+  .kpi-card .lbl{font-size:10px; color:var(--muted);
     text-transform:uppercase; letter-spacing:.5px; font-weight:700}
-  .kpi-card .kpi-value{font-size:22px; font-weight:800; color:var(--text);
+  .kpi-card .val{font-size:22px; font-weight:800; color:var(--text);
     margin-top:6px; letter-spacing:-.5px}
-  .kpi-card .kpi-sub{font-size:11px; color:var(--muted); margin-top:3px}
+  .kpi-card .sub{font-size:11px; color:var(--muted); margin-top:3px}
 
-  /* Layout */
   .grid-main{display:grid; grid-template-columns:1.3fr 1fr; gap:14px}
   @media(max-width:1100px){.grid-main{grid-template-columns:1fr}}
 
@@ -54,19 +117,19 @@
     display:flex; align-items:center; justify-content:space-between; gap:10px}
   .panel h2 .info{font-size:11px; color:var(--muted); font-weight:400}
 
-  /* Mapa LATAM */
-  .latam-map{width:100%; height:auto; display:block;
+  /* Mapa */
+  .latam-map{width:100%; height:auto; display:block; min-height:480px;
     background:linear-gradient(180deg,#0a1a2e 0%,#0d0d0d 100%);
     border-radius:6px}
-  .latam-map .pais{stroke:rgba(255,255,255,.2); stroke-width:.7;
+  .latam-map .pais{stroke:rgba(255,255,255,.2); stroke-width:.5;
     cursor:pointer; transition:filter .15s, stroke-width .15s}
   .latam-map .pais:hover{stroke:#fff; stroke-width:1.5; filter:brightness(1.2)}
   .latam-map .pais.selected{stroke:var(--orange); stroke-width:2;
     filter:drop-shadow(0 0 6px rgba(220,38,38,.6))}
-  .latam-map .pais.empty{fill:#1a1a1a !important; opacity:.5}
-  .latam-map .pais-label{fill:#fff; font-size:8px; font-weight:700;
-    text-anchor:middle; pointer-events:none;
-    text-shadow:0 1px 2px rgba(0,0,0,.9)}
+  .latam-map .pais.empty{fill:#1a1a1a !important; opacity:.6}
+  .latam-map .pais.brazil-home{fill:#0a0a0a !important; stroke:#444;
+    cursor:default; opacity:1}
+  .latam-map .pais.brazil-home:hover{filter:none; stroke:#444; stroke-width:.5}
 
   .legend{display:flex; align-items:center; gap:10px; margin-top:10px;
     font-size:11px; color:var(--muted)}
@@ -76,7 +139,7 @@
 
   /* Tabela */
   table{width:100%; border-collapse:collapse; font-size:12px}
-  th{padding:8px 10px; text-align:left; font-weight:700; color:var(--text);
+  th{padding:8px 10px; text-align:left; font-weight:700;
     border-bottom:1px solid var(--border-strong); font-size:10px;
     text-transform:uppercase; letter-spacing:.5px;
     cursor:pointer; user-select:none; background:var(--bg-alt)}
@@ -97,16 +160,6 @@
     flex-direction:column; gap:10px}
   #loading .ft{color:var(--orange); font-size:24px; font-weight:800; letter-spacing:2px}
   #loading .sub{color:#aaa; font-size:12px}
-
-  /* Filtros simples */
-  .filters{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;
-    align-items:center}
-  .filters label{font-size:11px; color:var(--muted); font-weight:700;
-    text-transform:uppercase; letter-spacing:.4px}
-  .filters select, .filters input{padding:7px 10px; background:#0a0a0a;
-    border:1px solid var(--input-border,#2a2a2a); color:#fff;
-    border-radius:var(--radius-sm); font-size:12px; font-family:inherit}
-  .filters select:focus, .filters input:focus{outline:none; border-color:var(--orange)}
 </style>
 </head>
 <body>
@@ -122,96 +175,144 @@
   <a href="dashboard_fueltech.html" class="back">← Voltar ao Brasil</a>
 </header>
 
-<div class="container" id="app" style="display:none">
-
-  <div class="filters">
-    <div>
-      <label>Ano</label>
-      <select id="f_ano"><option value="">Todos</option></select>
+<div class="layout" id="app" style="display:none">
+  <aside>
+    <h3>Busca de Cliente</h3>
+    <div class="filter-group">
+      <label>Nome / Fantasia</label>
+      <input type="text" id="f_nome" placeholder="Digite parte do nome...">
     </div>
-    <div>
-      <label>País</label>
-      <select id="f_pais"><option value="">Todos</option></select>
+    <div class="filter-group">
+      <label>Código do Cliente</label>
+      <input type="text" id="f_cd" placeholder="Ex: 010790">
+      <div id="cd_match_info" class="cd-match"></div>
     </div>
-    <div style="margin-left:auto">
-      <button id="btn_reset" style="padding:7px 16px; background:var(--orange);
-        color:#000; border:none; border-radius:18px; font-weight:700;
-        cursor:pointer; font-size:11px; letter-spacing:.5px">LIMPAR</button>
+
+    <h3>Período</h3>
+    <div class="filter-group">
+      <label>De</label>
+      <input type="date" id="f_from">
     </div>
-  </div>
-
-  <div class="kpi-row" id="kpis"></div>
-
-  <div class="grid-main">
-    <!-- ESQUERDA: Mapa LATAM -->
-    <div class="panel">
-      <h2>
-        <span>Mapa — América Latina</span>
-        <span class="info" id="map_info"></span>
-      </h2>
-      <svg class="latam-map" id="latam_map" viewBox="0 0 400 600"
-           preserveAspectRatio="xMidYMid meet"
-           xmlns="http://www.w3.org/2000/svg">
-        <g id="latam_paths"></g>
-        <g id="latam_labels"></g>
-      </svg>
-      <div class="legend">
-        <span>R$ 0</span>
-        <div class="legend-bar"></div>
-        <span id="legend_max">—</span>
+    <div class="filter-group">
+      <label>Até</label>
+      <input type="date" id="f_to">
+    </div>
+    <div class="filter-group">
+      <div class="quick-ranges" id="quick_ranges">
+        <button data-q="30d">30d</button>
+        <button data-q="90d">90d</button>
+        <button data-q="ytd">YTD</button>
+        <button data-q="3m">3m</button>
+        <button data-q="6m">6m</button>
+        <button data-q="12m">12m</button>
+        <button data-q="2y">2a</button>
+        <button data-q="all" class="active">Tudo</button>
       </div>
     </div>
 
-    <!-- DIREITA: Top Países -->
+    <h3>País</h3>
+    <div class="filter-group">
+      <div id="f_pais" class="chips"></div>
+    </div>
+
+    <h3>Segmentação</h3>
+    <div class="filter-group">
+      <label>Tabela de Compra</label>
+      <div id="f_tb" class="chips"></div>
+    </div>
+    <div class="filter-group produto-search">
+      <label>Produto (busca)</label>
+      <input type="text" id="f_prod_search" placeholder="Digite para buscar...">
+      <div class="results" id="prod_results"></div>
+      <div class="selected-prods" id="selected_prods"></div>
+    </div>
+    <div class="filter-group">
+      <label>Vendedor</label>
+      <select id="f_vd"><option value="">Todos</option></select>
+    </div>
+
+    <h3>Opções</h3>
+    <div class="filter-group">
+      <label class="toggle-row">
+        <input type="checkbox" id="f_incl_dev" checked>
+        <span>Incluir devoluções</span>
+      </label>
+    </div>
+    <div class="filter-group">
+      <label class="toggle-row">
+        <input type="checkbox" id="f_excl_padrao">
+        <span>Excluir CLIENTE PADRÃO</span>
+      </label>
+    </div>
+
+    <button class="btn-reset" id="btn_reset">LIMPAR FILTROS</button>
+  </aside>
+
+  <main>
+    <div class="kpi-row" id="kpis"></div>
+
+    <div class="grid-main">
+      <div class="panel">
+        <h2>
+          <span>Mapa — América Latina</span>
+          <span class="info" id="map_info"></span>
+        </h2>
+        <svg class="latam-map" id="latam_map" viewBox="0 0 400 600"
+             preserveAspectRatio="xMidYMid meet"
+             xmlns="http://www.w3.org/2000/svg">
+          <g id="latam_paths"></g>
+          <g id="latam_labels"></g>
+        </svg>
+        <div class="legend">
+          <span>R$ 0</span>
+          <div class="legend-bar"></div>
+          <span id="legend_max">—</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>
+          <span>Top Países LATAM</span>
+          <span class="info" id="paises_info"></span>
+        </h2>
+        <table id="tb_paises">
+          <thead>
+            <tr>
+              <th data-k="pais">País</th>
+              <th data-k="cnt" class="num">Pedidos</th>
+              <th data-k="val" class="num">Faturamento</th>
+              <th data-k="pct" class="num">%</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <div class="panel">
+        <h2><span>Faturamento por Mês</span></h2>
+        <div class="chart-wrap"><canvas id="chart_timeline"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2><span>Top 10 Produtos LATAM</span></h2>
+        <div class="chart-wrap"><canvas id="chart_produtos"></canvas></div>
+      </div>
+    </div>
+
     <div class="panel">
       <h2>
-        <span>Top Países LATAM</span>
-        <span class="info" id="paises_info"></span>
+        <span>Top 20 Clientes LATAM</span>
+        <span class="info" id="clientes_info"></span>
       </h2>
-      <table id="tb_paises">
+      <table id="tb_clientes">
         <thead>
-          <tr>
-            <th data-k="pais">País</th>
-            <th data-k="cnt" class="num">Pedidos</th>
-            <th data-k="val" class="num">Faturamento</th>
-            <th data-k="pct" class="num">%</th>
-          </tr>
+          <tr><th>#</th><th>Cliente</th><th>País</th><th class="num">Pedidos</th><th class="num">Faturamento</th></tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
-  </div>
-
-  <div class="grid-main">
-    <div class="panel">
-      <h2><span>Faturamento por Mês</span></h2>
-      <div class="chart-wrap"><canvas id="chart_timeline"></canvas></div>
-    </div>
-    <div class="panel">
-      <h2><span>Top 10 Produtos LATAM</span></h2>
-      <div class="chart-wrap"><canvas id="chart_produtos"></canvas></div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>
-      <span>Top 20 Clientes LATAM</span>
-      <span class="info" id="clientes_info"></span>
-    </h2>
-    <table id="tb_clientes">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Cliente</th>
-          <th>País</th>
-          <th class="num">Pedidos</th>
-          <th class="num">Faturamento</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
+  </main>
 </div>
 
 <script src="dashboard_geo_world.js"></script>
@@ -222,31 +323,27 @@ const DATA = window.__DATA__;
 const WGEO = window.__GEO_WORLD__ || { countries:{}, states:{} };
 const C = Object.fromEntries(DATA.schema.map((s,i)=>[s,i]));
 
-// === LATAM countries ===
-// Dataset uses these names
-const LATAM_DATASET = new Set([
-  'ARGENTINA','BOLIVIA','CHILE','COLOMBIA','EQUADOR',
-  'GUIANA','PARAGUAI','PERU','URUGUAI','VENEZUELA',
-  'MEXICO','PANAMA'
-]);
-// Mapping dataset → Natural Earth name
+const LATAM_DATASET = ['ARGENTINA','BOLIVIA','CHILE','COLOMBIA','EQUADOR',
+  'GUIANA','PARAGUAI','PERU','URUGUAI','VENEZUELA','MEXICO','PANAMA'];
+const LATAM_SET = new Set(LATAM_DATASET);
 const PAIS_DS_TO_NE = {
   'ARGENTINA':'Argentina','BOLIVIA':'Bolivia','CHILE':'Chile',
   'COLOMBIA':'Colombia','EQUADOR':'Ecuador','GUIANA':'Guyana',
   'PARAGUAI':'Paraguay','PERU':'Peru','URUGUAI':'Uruguay',
   'VENEZUELA':'Venezuela','MEXICO':'Mexico','PANAMA':'Panama'
 };
-const PAIS_NE_TO_DS = {};
-for (const k in PAIS_DS_TO_NE) PAIS_NE_TO_DS[PAIS_DS_TO_NE[k]] = k;
 
-// State
 const state = {
-  ano: '',
-  pais: '',
-  selectedPais: null
+  nome:'', cd:'', nomeAutoFromCd:'',
+  rangeFrom:null, rangeTo:null,  // strings YYYYMMDD ou null
+  quickRange:'all',
+  paises:new Set(), tabelas:new Set(), produtos:new Set(),
+  vendedor:'',
+  incluirDev:true, excluirPadrao:false,
+  selectedPais:null
 };
+const DATA_RANGE = { min:'', max:'' };
 
-// === Helpers ===
 const fmtMoney = v => 'R$ ' + (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtMoneyShort = v => {
   v = v||0;
@@ -256,378 +353,209 @@ const fmtMoneyShort = v => {
   return 'R$ ' + v.toFixed(0);
 };
 const fmtInt = v => (v||0).toLocaleString('pt-BR');
+const escHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// === Heat color ===
+// Heat color (gradiente Fueltech)
 function heatColor(t) {
   t = Math.sqrt(Math.max(0, Math.min(1, t)));
-  const stops = [
-    [0,    [26,26,26]],
-    [0.10, [60,12,12]],
-    [0.25, [127,29,29]],
-    [0.45, [185,28,28]],
-    [0.65, [220,38,38]],
-    [0.85, [239,68,68]],
-    [1.00, [251,146,60]]
-  ];
+  const stops = [[0,[26,26,26]],[0.10,[60,12,12]],[0.25,[127,29,29]],
+    [0.45,[185,28,28]],[0.65,[220,38,38]],[0.85,[239,68,68]],[1.00,[251,146,60]]];
   for (let i = 1; i < stops.length; i++) {
     if (t <= stops[i][0]) {
       const a = stops[i-1], b = stops[i];
       const k = (t - a[0]) / (b[0] - a[0]);
-      return [
-        Math.round(a[1][0] + (b[1][0]-a[1][0])*k),
-        Math.round(a[1][1] + (b[1][1]-a[1][1])*k),
-        Math.round(a[1][2] + (b[1][2]-a[1][2])*k)
-      ];
+      return [Math.round(a[1][0]+(b[1][0]-a[1][0])*k),
+              Math.round(a[1][1]+(b[1][1]-a[1][1])*k),
+              Math.round(a[1][2]+(b[1][2]-a[1][2])*k)];
     }
   }
   return stops[stops.length-1][1];
 }
 function heatRGB(t) { const c = heatColor(t); return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; }
 
-// === Aggregation ===
+// Date helpers
+function ymdToISO(s) {
+  if (!s || s.length !== 8) return '';
+  return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8);
+}
+function isoToYMD(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+  return iso.replace(/-/g,'');
+}
+function dateAdd(ymd, days) {
+  const y = +ymd.slice(0,4), m = +ymd.slice(4,6) - 1, d = +ymd.slice(6,8);
+  const dt = new Date(y, m, d);
+  dt.setDate(dt.getDate() + days);
+  return String(dt.getFullYear()) + String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0');
+}
+function dateAddMonths(ymd, n) {
+  const y = +ymd.slice(0,4), m = +ymd.slice(4,6) - 1, d = +ymd.slice(6,8);
+  const dt = new Date(y, m, d);
+  dt.setMonth(dt.getMonth() + n);
+  return String(dt.getFullYear()) + String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0');
+}
+
+// Auto-fill Cd → Nome
+function findClientByCd(cd) {
+  if (!cd) return null;
+  const cdTrim = cd.replace(/^0+/, '');
+  for (let i = 0; i < DATA.clients.length; i++) {
+    const c = DATA.clients[i];
+    if (!c) continue;
+    if (c[0] === cd || (c[0]||'').replace(/^0+/, '') === cdTrim) return c;
+  }
+  return null;
+}
+function syncCdMatch() {
+  const info = document.getElementById('cd_match_info');
+  const nomeInp = document.getElementById('f_nome');
+  if (!state.cd) {
+    if (state.nomeAutoFromCd && state.nome === state.nomeAutoFromCd) {
+      state.nome = ''; state.nomeAutoFromCd = '';
+      if (nomeInp) nomeInp.value = '';
+    }
+    info.className = 'cd-match'; info.innerHTML = '';
+    return;
+  }
+  const cli = findClientByCd(state.cd);
+  if (cli) {
+    info.className = 'cd-match active';
+    info.innerHTML = '<span class="tag">✓ Cliente</span><span class="name">' + escHtml(cli[1]) + '</span>';
+    if (!state.nome || state.nome === state.nomeAutoFromCd) {
+      state.nome = cli[1] || '';
+      state.nomeAutoFromCd = state.nome;
+      if (nomeInp) nomeInp.value = state.nome;
+    }
+  } else {
+    info.className = 'cd-match active miss';
+    info.innerHTML = '<span class="tag">⚠ Sem match</span><span class="name">Código não encontrado</span>';
+    if (state.nomeAutoFromCd && state.nome === state.nomeAutoFromCd) {
+      state.nome = ''; state.nomeAutoFromCd = '';
+      if (nomeInp) nomeInp.value = '';
+    }
+  }
+}
+
+// Quick ranges
+function applyQuickRange(q) {
+  state.quickRange = q;
+  document.querySelectorAll('#quick_ranges button').forEach(b => {
+    b.classList.toggle('active', b.dataset.q === q);
+  });
+  if (q === 'all') {
+    state.rangeFrom = DATA_RANGE.min;
+    state.rangeTo = DATA_RANGE.max;
+  } else if (q === 'ytd') {
+    state.rangeFrom = DATA_RANGE.max.slice(0,4) + '0101';
+    state.rangeTo = DATA_RANGE.max;
+  } else {
+    let from;
+    if (q === '30d') from = dateAdd(DATA_RANGE.max, -29);
+    else if (q === '90d') from = dateAdd(DATA_RANGE.max, -89);
+    else if (q === '3m') from = dateAddMonths(DATA_RANGE.max, -3);
+    else if (q === '6m') from = dateAddMonths(DATA_RANGE.max, -6);
+    else if (q === '12m') from = dateAddMonths(DATA_RANGE.max, -12);
+    else if (q === '2y') from = dateAddMonths(DATA_RANGE.max, -24);
+    else from = DATA_RANGE.min;
+    if (from < DATA_RANGE.min) from = DATA_RANGE.min;
+    state.rangeFrom = from;
+    state.rangeTo = DATA_RANGE.max;
+  }
+  document.getElementById('f_from').value = ymdToISO(state.rangeFrom);
+  document.getElementById('f_to').value = ymdToISO(state.rangeTo);
+}
+
+// Aggregation
 function aggregate() {
-  const out = { porPais: {}, porMes: {}, porProduto: {}, porCliente: {},
-    totVal: 0, totCnt: 0, totQtd: 0, totClientes: new Set() };
+  const out = { porPais:{}, porMes:{}, porProduto:{}, porCliente:{},
+    totVal:0, totCnt:0, totQtd:0, totClientes:new Set() };
+  const fromN = state.rangeFrom ? +state.rangeFrom : 0;
+  const toN = state.rangeTo ? +state.rangeTo : 99999999;
   for (const r of DATA.orders) {
     if (DATA.ufs[r[C.uf]] !== 'EX') continue;
-    if (r[C.tr] === 1) continue; // ignora devoluções
+    const isDev = r[C.tr] === 1;
+    if (!state.incluirDev && isDev) continue;
     const pais = DATA.paises[r[C.pa]] || '?';
-    if (!LATAM_DATASET.has(pais)) continue;
-    if (state.ano && r[C.ano] !== +state.ano) continue;
-    if (state.pais && pais !== state.pais) continue;
+    if (!LATAM_SET.has(pais)) continue;
+    if (state.paises.size && !state.paises.has(pais)) continue;
+
+    const cli = DATA.clients[r[C.cl]] || ['','',''];
+    if (state.excluirPadrao && cli[1] === 'CLIENTE PADRAO') continue;
+    if (state.cd && !((cli[0]||'').includes(state.cd))) continue;
+    if (state.nome) {
+      const n = state.nome.toLowerCase();
+      const nc = (cli[1]||'').toLowerCase();
+      const nf = (cli[2]||'').toLowerCase();
+      if (!nc.includes(n) && !nf.includes(n)) continue;
+    }
+    if (state.tabelas.size && !state.tabelas.has(r[C.tb])) continue;
+    if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) continue;
+    if (state.produtos.size) {
+      let ok = false;
+      for (const [pi] of r[C.pr]) if (state.produtos.has(pi)) { ok = true; break; }
+      if (!ok) continue;
+    }
+    const dt = +r[C.data];
+    if (dt < fromN || dt > toN) continue;
 
     if (!out.porPais[pais]) out.porPais[pais] = { cnt:0, val:0, qtd:0, clientes:new Set() };
-    out.porPais[pais].cnt++;
+    if (!isDev) out.porPais[pais].cnt++;
     out.porPais[pais].val += r[C.val];
     out.porPais[pais].qtd += r[C.qtd];
     out.porPais[pais].clientes.add(r[C.cl]);
 
-    const ym = r[C.ano] * 100 + r[C.mes];
-    if (!out.porMes[ym]) out.porMes[ym] = { val: 0, cnt: 0 };
+    const ym = r[C.ano]*100 + r[C.mes];
+    if (!out.porMes[ym]) out.porMes[ym] = { val:0, cnt:0 };
     out.porMes[ym].val += r[C.val];
-    out.porMes[ym].cnt++;
+    if (!isDev) out.porMes[ym].cnt++;
 
     for (const [pi, q, v] of r[C.pr]) {
       const pn = DATA.produtos[pi];
-      if (!out.porProduto[pn]) out.porProduto[pn] = { val: 0, qtd: 0 };
+      if (!out.porProduto[pn]) out.porProduto[pn] = { val:0, qtd:0 };
       out.porProduto[pn].val += v;
       out.porProduto[pn].qtd += q;
     }
 
-    const cli = r[C.cl];
-    if (!out.porCliente[cli]) out.porCliente[cli] = { cnt: 0, val: 0, paises: new Set() };
-    out.porCliente[cli].cnt++;
-    out.porCliente[cli].val += r[C.val];
-    out.porCliente[cli].paises.add(pais);
+    const cliIdx = r[C.cl];
+    if (!out.porCliente[cliIdx]) out.porCliente[cliIdx] = { cnt:0, val:0, paises:new Set() };
+    if (!isDev) out.porCliente[cliIdx].cnt++;
+    out.porCliente[cliIdx].val += r[C.val];
+    out.porCliente[cliIdx].paises.add(pais);
 
     out.totVal += r[C.val];
-    out.totCnt++;
+    if (!isDev) { out.totCnt++; out.totClientes.add(r[C.cl]); }
     out.totQtd += r[C.qtd];
-    out.totClientes.add(cli);
   }
   return out;
 }
 
-// === Render KPIs ===
+// === KPIs ===
 function renderKPIs(agg) {
   const tk = agg.totCnt > 0 ? (agg.totVal / agg.totCnt) : 0;
   const numPaises = Object.keys(agg.porPais).length;
   document.getElementById('kpis').innerHTML =
-    `<div class="kpi-card"><div class="kpi-label">Faturamento Total</div>
-       <div class="kpi-value">${fmtMoneyShort(agg.totVal)}</div>
-       <div class="kpi-sub">${fmtMoney(agg.totVal)}</div></div>
-     <div class="kpi-card"><div class="kpi-label">Pedidos</div>
-       <div class="kpi-value">${fmtInt(agg.totCnt)}</div>
-       <div class="kpi-sub">${numPaises} país(es)</div></div>
-     <div class="kpi-card"><div class="kpi-label">Clientes Únicos</div>
-       <div class="kpi-value">${fmtInt(agg.totClientes.size)}</div>
-       <div class="kpi-sub">no recorte</div></div>
-     <div class="kpi-card"><div class="kpi-label">Ticket Médio</div>
-       <div class="kpi-value">${fmtMoneyShort(tk)}</div>
-       <div class="kpi-sub">por pedido</div></div>
-     <div class="kpi-card"><div class="kpi-label">Unidades</div>
-       <div class="kpi-value">${fmtInt(Math.round(agg.totQtd))}</div>
-       <div class="kpi-sub">itens vendidos</div></div>`;
+    `<div class="kpi-card"><div class="lbl">Faturamento Total</div>
+       <div class="val">${fmtMoneyShort(agg.totVal)}</div>
+       <div class="sub">${fmtMoney(agg.totVal)}</div></div>
+     <div class="kpi-card"><div class="lbl">Pedidos</div>
+       <div class="val">${fmtInt(agg.totCnt)}</div>
+       <div class="sub">${numPaises} país(es)</div></div>
+     <div class="kpi-card"><div class="lbl">Clientes Únicos</div>
+       <div class="val">${fmtInt(agg.totClientes.size)}</div>
+       <div class="sub">no recorte</div></div>
+     <div class="kpi-card"><div class="lbl">Ticket Médio</div>
+       <div class="val">${fmtMoneyShort(tk)}</div>
+       <div class="sub">por pedido</div></div>
+     <div class="kpi-card"><div class="lbl">Unidades</div>
+       <div class="val">${fmtInt(Math.round(agg.totQtd))}</div>
+       <div class="sub">itens vendidos</div></div>`;
 }
 
-// === Render Mapa LATAM ===
+// === Mapa LATAM (com Brasil contextual) ===
 function buildMap() {
   const layer = document.getElementById('latam_paths');
-  const labels = document.getElementById('latam_labels');
   if (!layer) return;
   layer.innerHTML = '';
-  labels.innerHTML = '';
 
-  // Coleta paths dos países LATAM e calcula bbox
-  const paths = [];
-  let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
-  for (const ds of LATAM_DATASET) {
-    const ne = PAIS_DS_TO_NE[ds];
-    const country = WGEO.countries[ne];
-    if (!country) continue;
-    paths.push({ ds, ne, d: country.d });
-    const pts = country.d.match(/-?\d+\.?\d*/g);
-    if (pts) {
-      for (let i = 0; i < pts.length; i += 2) {
-        const x = +pts[i], y = +pts[i+1];
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-  // Set viewBox com padding
-  if (minX !== 1e9) {
-    const pad = 6;
-    const vb = `${(minX-pad).toFixed(1)} ${(minY-pad).toFixed(1)} ${(maxX-minX+pad*2).toFixed(1)} ${(maxY-minY+pad*2).toFixed(1)}`;
-    document.getElementById('latam_map').setAttribute('viewBox', vb);
-  }
-  // Insere paths
-  for (const p of paths) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    el.setAttribute('class', 'pais');
-    el.setAttribute('d', p.d);
-    el.setAttribute('data-pais', p.ds);
-    el.setAttribute('fill-rule', 'evenodd');
-    el.addEventListener('click', () => {
-      state.selectedPais = state.selectedPais === p.ds ? null : p.ds;
-      state.pais = state.selectedPais || '';
-      document.getElementById('f_pais').value = state.pais;
-      renderAll();
-    });
-    layer.appendChild(el);
-  }
-}
-
-function renderMap(agg) {
-  const layer = document.getElementById('latam_paths');
-  if (!layer) return;
-  let max = 0;
-  for (const ds in agg.porPais) {
-    if (agg.porPais[ds].val > max) max = agg.porPais[ds].val;
-  }
-  layer.querySelectorAll('.pais').forEach(p => {
-    const ds = p.dataset.pais;
-    const info = agg.porPais[ds];
-    const v = info ? info.val : 0;
-    const t = max ? v / max : 0;
-    if (v > 0) {
-      p.setAttribute('fill', heatRGB(t));
-      p.classList.remove('empty');
-    } else {
-      p.setAttribute('fill', '#1a1a1a');
-      p.classList.add('empty');
-    }
-    p.classList.toggle('selected', state.selectedPais === ds);
-    // Tooltip via title
-    let title = p.querySelector('title');
-    if (!title) {
-      title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      p.appendChild(title);
-    }
-    title.textContent = ds + (info ? ' — ' + fmtMoney(info.val) + ' · ' + info.cnt + ' pedidos' : ' — sem vendas no recorte');
-  });
-  document.getElementById('legend_max').textContent = fmtMoneyShort(max);
-  document.getElementById('map_info').textContent =
-    Object.keys(agg.porPais).length + ' país(es) · top: ' +
-    (Object.entries(agg.porPais).sort((a,b)=>b[1].val-a[1].val)[0]?.[0] || '—');
-}
-
-// === Render Tabela Países ===
-let _paisesSort = { k: 'val', dir: -1 };
-function renderTabPaises(agg) {
-  const arr = Object.entries(agg.porPais).map(([pais, d]) => ({
-    pais, cnt: d.cnt, val: d.val,
-    pct: agg.totVal > 0 ? (d.val / agg.totVal * 100) : 0
-  }));
-  const k = _paisesSort.k, dir = _paisesSort.dir;
-  arr.sort((a,b) => {
-    let av = a[k], bv = b[k];
-    if (typeof av === 'string') return dir * av.localeCompare(bv);
-    return dir * (av - bv);
-  });
-  const max = Math.max.apply(null, arr.map(x => x.val).concat([1]));
-  const tbody = document.querySelector('#tb_paises tbody');
-  if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted)">Sem vendas LATAM no recorte.</td></tr>';
-  } else {
-    tbody.innerHTML = arr.map(x => {
-      const w = Math.max(2, Math.round(x.val / max * 60));
-      return `<tr data-pais="${x.pais}">
-        <td><span class="country-bar" style="width:${w}px"></span>${x.pais}</td>
-        <td class="num">${fmtInt(x.cnt)}</td>
-        <td class="num">${fmtMoneyShort(x.val)}</td>
-        <td class="num">${x.pct.toFixed(1).replace('.',',')}%</td>
-      </tr>`;
-    }).join('');
-    tbody.querySelectorAll('tr').forEach(tr => {
-      tr.onclick = () => {
-        state.selectedPais = state.selectedPais === tr.dataset.pais ? null : tr.dataset.pais;
-        state.pais = state.selectedPais || '';
-        document.getElementById('f_pais').value = state.pais;
-        renderAll();
-      };
-    });
-  }
-  document.getElementById('paises_info').textContent = arr.length + ' país(es)';
-}
-
-// === Charts ===
-let charts = {};
-function renderTimeline(agg) {
-  const entries = Object.entries(agg.porMes).sort((a,b)=>+a[0] - +b[0]);
-  const labels = entries.map(([ym]) => {
-    const y = Math.floor(+ym / 100), m = +ym % 100;
-    const MS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-    return MS[m-1] + '/' + (y % 100);
-  });
-  const data = entries.map(([,v]) => v.val);
-  const cfg = {
-    type: 'line',
-    data: { labels, datasets: [{
-      data, borderColor: '#DC2626',
-      backgroundColor: 'rgba(220,38,38,.15)',
-      tension: 0.3, fill: true, borderWidth: 2,
-      pointRadius: 3, pointBackgroundColor: '#DC2626'
-    }]},
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => fmtMoney(c.parsed.y) } }
-      },
-      scales: {
-        x: { grid: { color: '#222' }, ticks: { color: '#aaa', font: { size: 9 } } },
-        y: {
-          grid: { color: '#222' },
-          ticks: { color: '#aaa', font: { size: 9 }, callback: v => fmtMoneyShort(v) }
-        }
-      }
-    }
-  };
-  if (charts.timeline) { charts.timeline.destroy(); }
-  charts.timeline = new Chart(document.getElementById('chart_timeline'), cfg);
-}
-
-function renderProdutos(agg) {
-  const top = Object.entries(agg.porProduto)
-    .sort((a,b) => b[1].val - a[1].val).slice(0, 10);
-  const labels = top.map(([n]) => n.length > 28 ? n.substring(0,26)+'…' : n);
-  const data = top.map(([,v]) => v.val);
-  const qtds = top.map(([,v]) => Math.round(v.qtd));
-  const cfg = {
-    type: 'bar',
-    data: { labels, datasets: [{ data, backgroundColor: '#DC2626', borderRadius: 3 }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => fmtMoney(c.parsed.x) + ' · ' + fmtInt(qtds[c.dataIndex]) + ' un.' } }
-      },
-      scales: {
-        x: { ticks: { callback: v => fmtMoneyShort(v), color: '#aaa', font: { size: 9 } }, grid: { color: '#222' } },
-        y: { ticks: { color: '#aaa', font: { size: 9 } }, grid: { display: false } }
-      }
-    }
-  };
-  if (charts.produtos) { charts.produtos.destroy(); }
-  charts.produtos = new Chart(document.getElementById('chart_produtos'), cfg);
-}
-
-function renderClientes(agg) {
-  const arr = Object.entries(agg.porCliente)
-    .map(([cli, d]) => {
-      const c = DATA.clients[cli] || ['','',''];
-      return {
-        cd: c[0] || '', nome: c[1] || '—',
-        val: d.val, cnt: d.cnt,
-        paises: [...d.paises].join(', ')
-      };
-    })
-    .sort((a, b) => b.val - a.val).slice(0, 20);
-  const tbody = document.querySelector('#tb_clientes tbody');
-  if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">—</td></tr>';
-  } else {
-    tbody.innerHTML = arr.map((x, i) =>
-      `<tr><td>${i+1}</td><td><strong>${x.nome}</strong> <span style="color:var(--muted);font-size:10px">${x.cd}</span></td>
-       <td>${x.paises}</td><td class="num">${fmtInt(x.cnt)}</td><td class="num">${fmtMoneyShort(x.val)}</td></tr>`
-    ).join('');
-  }
-  document.getElementById('clientes_info').textContent = arr.length + ' clientes';
-}
-
-// === Render All ===
-function renderAll() {
-  const agg = aggregate();
-  renderKPIs(agg);
-  renderMap(agg);
-  renderTabPaises(agg);
-  renderTimeline(agg);
-  renderProdutos(agg);
-  renderClientes(agg);
-}
-
-// === Init ===
-function init() {
-  // Esconde loading
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('app').style.display = '';
-
-  // Popula filtros
-  const anos = new Set();
-  for (const r of DATA.orders) {
-    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
-    anos.add(r[C.ano]);
-  }
-  const anoSel = document.getElementById('f_ano');
-  [...anos].sort().forEach(a => {
-    const opt = document.createElement('option');
-    opt.value = a; opt.textContent = a;
-    anoSel.appendChild(opt);
-  });
-  const paisSel = document.getElementById('f_pais');
-  [...LATAM_DATASET].sort().forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p; opt.textContent = p;
-    paisSel.appendChild(opt);
-  });
-
-  // Handlers
-  anoSel.onchange = e => { state.ano = e.target.value; renderAll(); };
-  paisSel.onchange = e => {
-    state.pais = e.target.value;
-    state.selectedPais = state.pais || null;
-    renderAll();
-  };
-  document.getElementById('btn_reset').onclick = () => {
-    state.ano = ''; state.pais = ''; state.selectedPais = null;
-    anoSel.value = ''; paisSel.value = '';
-    renderAll();
-  };
-
-  // Sort tabela países
-  document.querySelectorAll('#tb_paises th').forEach(th => {
-    th.onclick = () => {
-      const k = th.dataset.k;
-      if (_paisesSort.k === k) _paisesSort.dir *= -1;
-      else { _paisesSort.k = k; _paisesSort.dir = (k === 'pais') ? 1 : -1; }
-      renderAll();
-    };
-  });
-
-  // Constrói mapa (uma vez) + render
-  buildMap();
-  renderAll();
-}
-
-// Boot quando tudo carregar
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  setTimeout(init, 30);
-}
-</script>
-</body>
-</html>
+  // Lista de países a desenhar: LATAM + Brasil (matriz, cinza)
+  const todos = ['BRASIL', ...LATA

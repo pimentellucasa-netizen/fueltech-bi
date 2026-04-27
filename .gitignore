@@ -1,0 +1,21 @@
+# Arquivos fonte do ERP (dados brutos sensíveis)
+*.xltx
+*.xls
+*.xlsx
+*.csv
+
+# Versão monolítica antiga
+dashboard_fueltech_v1.html
+
+# Sistema / OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+.sync_test.txt
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~

@@ -463,6 +463,42 @@
   #tab_export .export-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
   @media(max-width:1100px){#tab_export .export-grid{grid-template-columns:1fr}}
 
+  /* Mapa Mundo / Continente (drill-down) */
+  .map-breadcrumb{display:flex;align-items:center;gap:6px;
+    margin-bottom:10px;font-size:11px;color:var(--muted);font-weight:600;flex-wrap:wrap}
+  .map-breadcrumb .bc-link{background:transparent;border:1px solid var(--border);
+    color:var(--muted);padding:4px 10px;border-radius:14px;cursor:pointer;
+    font-size:11px;font-family:inherit;font-weight:600;transition:all .15s}
+  .map-breadcrumb .bc-link:hover{border-color:var(--orange);color:var(--orange)}
+  .map-breadcrumb .bc-link.active{background:var(--orange);color:#000;border-color:var(--orange)}
+  .map-breadcrumb .bc-sep{color:var(--muted);font-size:10px}
+
+  .world-map-svg{width:100%;height:auto;display:block;cursor:default}
+  .world-map-svg .continent{stroke:var(--bg);stroke-width:2;cursor:pointer;
+    transition:filter .15s,stroke-width .15s}
+  .world-map-svg .continent:hover{stroke-width:3;filter:brightness(1.3)}
+  .world-map-svg .continent.selected{stroke:var(--orange);stroke-width:3}
+  .world-map-svg .continent-label{fill:#fff;font-size:11px;font-weight:800;
+    letter-spacing:.6px;text-anchor:middle;pointer-events:none;
+    text-shadow:0 0 4px rgba(0,0,0,.8)}
+
+  /* Grid de países dentro de um continente */
+  .country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:8px;padding:6px}
+  .country-card{background:var(--card);border:1px solid var(--border);
+    border-radius:6px;padding:10px;cursor:pointer;transition:all .15s;
+    display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden}
+  .country-card:hover{border-color:var(--orange);transform:translateY(-2px);
+    box-shadow:0 4px 12px rgba(220,38,38,.2)}
+  .country-card .cc-flag{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .country-card .cc-name{font-size:11px;font-weight:700;color:var(--text);
+    letter-spacing:.2px;line-height:1.2;padding-left:6px}
+  .country-card .cc-val{font-size:13px;font-weight:800;color:var(--orange);
+    padding-left:6px;font-variant-numeric:tabular-nums}
+  .country-card .cc-sub{font-size:9px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.4px;padding-left:6px}
+  .country-card.empty{opacity:.4}
+
   /* Mapa da AS */
   .sa-map-wrap{background:var(--card-grad);border:1px solid var(--border);
     border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-sm);
@@ -726,32 +762,64 @@
           <svg id="map" viewBox="0 0 800 700" xmlns="http://www.w3.org/2000/svg"></svg>
           <div class="tooltip" id="tooltip"></div>
         </div>
-        <!-- Mapa América do Sul (apenas quando aba Exportações) -->
-        <div class="map-wrap" id="map_sa_wrap" style="display:none">
-          <svg class="sa-map-svg" id="sa_map" viewBox="0 0 400 520" xmlns="http://www.w3.org/2000/svg">
-            <path class="pais brazil-home" data-p="BRASIL" d="M 215 80 L 280 75 L 320 95 L 345 130 L 360 175 L 365 220 L 360 270 L 340 310 L 305 335 L 270 345 L 235 340 L 215 315 L 200 285 L 195 240 L 200 195 L 210 145 Z"/>
-            <text class="pais-label" x="280" y="200">BRASIL</text>
-            <path class="pais" data-p="VENEZUELA" d="M 175 60 L 230 55 L 260 70 L 250 95 L 220 100 L 185 95 L 170 80 Z"/>
-            <text class="pais-label" x="215" y="80">VEN</text>
-            <path class="pais" data-p="COLOMBIA" d="M 130 75 L 175 60 L 200 90 L 195 130 L 175 155 L 150 145 L 130 115 Z"/>
-            <text class="pais-label" x="165" y="110">COL</text>
-            <path class="pais" data-p="EQUADOR" d="M 110 145 L 150 145 L 155 175 L 130 180 L 110 165 Z"/>
-            <text class="pais-label" x="135" y="167">EQU</text>
-            <path class="pais" data-p="PERU" d="M 110 180 L 175 175 L 200 215 L 195 270 L 170 290 L 130 270 L 110 230 Z"/>
-            <text class="pais-label" x="155" y="240">PERU</text>
-            <path class="pais" data-p="BOLIVIA" d="M 195 215 L 245 215 L 270 250 L 260 290 L 220 295 L 195 270 Z"/>
-            <text class="pais-label" x="232" y="260">BOL</text>
-            <path class="pais" data-p="CHILE" d="M 130 270 L 175 290 L 180 360 L 175 420 L 165 470 L 145 480 L 135 440 L 130 380 L 125 320 Z"/>
-            <text class="pais-label" x="155" y="380">CHI</text>
-            <path class="pais" data-p="PARAGUAI" d="M 220 295 L 270 290 L 275 325 L 245 335 L 220 325 Z"/>
-            <text class="pais-label" x="248" y="316">PAR</text>
-            <path class="pais" data-p="URUGUAI" d="M 245 350 L 290 345 L 295 375 L 265 380 L 245 370 Z"/>
-            <text class="pais-label" x="270" y="365">URU</text>
-            <path class="pais" data-p="ARGENTINA" d="M 175 290 L 220 295 L 245 335 L 245 370 L 240 420 L 220 460 L 195 480 L 175 470 L 170 420 L 175 360 Z"/>
-            <text class="pais-label" x="208" y="395">ARG</text>
-            <path class="pais" data-p="GUIANA" d="M 250 60 L 285 65 L 290 85 L 270 90 L 255 80 Z"/>
-            <text class="pais-label" x="270" y="78">GUI</text>
+        <!-- Wrapper Mundo → Continente (visão Exportações) -->
+        <div class="map-wrap" id="map_world_wrap" style="display:none">
+          <!-- Breadcrumb -->
+          <div class="map-breadcrumb" id="map_breadcrumb">
+            <button type="button" class="bc-link active" data-view="world">🌎 Mundo</button>
+          </div>
+          <!-- Visão World: 6 continentes em silhuetas/blocos -->
+          <svg class="world-map-svg" id="world_map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+            <!-- América do Norte -->
+            <path class="continent" data-c="America do Norte" d="M 60 70 L 200 60 L 280 90 L 290 160 L 240 220 L 180 260 L 130 240 L 80 180 L 50 120 Z"/>
+            <text class="continent-label" x="170" y="160">AMÉRICA DO NORTE</text>
+            <!-- América do Sul -->
+            <path class="continent" data-c="America do Sul" d="M 220 270 L 290 260 L 310 320 L 290 410 L 250 470 L 210 470 L 195 410 L 200 340 Z"/>
+            <text class="continent-label" x="250" y="370">AMÉRICA DO SUL</text>
+            <!-- Europa -->
+            <path class="continent" data-c="Europa" d="M 460 80 L 560 70 L 590 110 L 580 170 L 540 200 L 480 200 L 450 160 L 440 110 Z"/>
+            <text class="continent-label" x="510" y="140">EUROPA</text>
+            <!-- África -->
+            <path class="continent" data-c="Africa" d="M 470 220 L 580 220 L 610 290 L 600 380 L 540 450 L 490 440 L 460 360 L 450 280 Z"/>
+            <text class="continent-label" x="530" y="340">ÁFRICA</text>
+            <!-- Ásia -->
+            <path class="continent" data-c="Asia" d="M 600 60 L 800 60 L 880 120 L 900 220 L 820 270 L 720 250 L 640 200 L 600 130 Z"/>
+            <text class="continent-label" x="750" y="160">ÁSIA</text>
+            <!-- Oceania -->
+            <path class="continent" data-c="Oceania" d="M 800 340 L 920 340 L 940 400 L 900 440 L 830 440 L 800 400 Z"/>
+            <text class="continent-label" x="870" y="395">OCEANIA</text>
           </svg>
+
+          <!-- Visão Continente: container que troca conteúdo conforme drill-down -->
+          <div id="continent_view" style="display:none">
+            <!-- SVG da América do Sul (mesmo de antes, mostrado quando drill em AS) -->
+            <svg class="sa-map-svg" id="sa_map" viewBox="0 0 400 520" xmlns="http://www.w3.org/2000/svg" style="display:none">
+              <path class="pais brazil-home" data-p="BRASIL" d="M 215 80 L 280 75 L 320 95 L 345 130 L 360 175 L 365 220 L 360 270 L 340 310 L 305 335 L 270 345 L 235 340 L 215 315 L 200 285 L 195 240 L 200 195 L 210 145 Z"/>
+              <text class="pais-label" x="280" y="200">BRASIL</text>
+              <path class="pais" data-p="VENEZUELA" d="M 175 60 L 230 55 L 260 70 L 250 95 L 220 100 L 185 95 L 170 80 Z"/>
+              <text class="pais-label" x="215" y="80">VEN</text>
+              <path class="pais" data-p="COLOMBIA" d="M 130 75 L 175 60 L 200 90 L 195 130 L 175 155 L 150 145 L 130 115 Z"/>
+              <text class="pais-label" x="165" y="110">COL</text>
+              <path class="pais" data-p="EQUADOR" d="M 110 145 L 150 145 L 155 175 L 130 180 L 110 165 Z"/>
+              <text class="pais-label" x="135" y="167">EQU</text>
+              <path class="pais" data-p="PERU" d="M 110 180 L 175 175 L 200 215 L 195 270 L 170 290 L 130 270 L 110 230 Z"/>
+              <text class="pais-label" x="155" y="240">PERU</text>
+              <path class="pais" data-p="BOLIVIA" d="M 195 215 L 245 215 L 270 250 L 260 290 L 220 295 L 195 270 Z"/>
+              <text class="pais-label" x="232" y="260">BOL</text>
+              <path class="pais" data-p="CHILE" d="M 130 270 L 175 290 L 180 360 L 175 420 L 165 470 L 145 480 L 135 440 L 130 380 L 125 320 Z"/>
+              <text class="pais-label" x="155" y="380">CHI</text>
+              <path class="pais" data-p="PARAGUAI" d="M 220 295 L 270 290 L 275 325 L 245 335 L 220 325 Z"/>
+              <text class="pais-label" x="248" y="316">PAR</text>
+              <path class="pais" data-p="URUGUAI" d="M 245 350 L 290 345 L 295 375 L 265 380 L 245 370 Z"/>
+              <text class="pais-label" x="270" y="365">URU</text>
+              <path class="pais" data-p="ARGENTINA" d="M 175 290 L 220 295 L 245 335 L 245 370 L 240 420 L 220 460 L 195 480 L 175 470 L 170 420 L 175 360 Z"/>
+              <text class="pais-label" x="208" y="395">ARG</text>
+              <path class="pais" data-p="GUIANA" d="M 250 60 L 285 65 L 290 85 L 270 90 L 255 80 Z"/>
+              <text class="pais-label" x="270" y="78">GUI</text>
+            </svg>
+            <!-- Para outros continentes: grid de cards de países -->
+            <div id="continent_grid" class="country-grid"></div>
+          </div>
         </div>
         <div class="map-legend">
           <span id="legend_min">0</span>
@@ -1010,7 +1078,9 @@ const state = {
   mapMetric:'val', mapAgg:'uf', tableLimit:500,
   // Aba ativa do dashboard
   activeTab:'brasil',
-  // Toggle "Só América do Sul" no tab Exportações
+  // Drill-down do mapa global: 'world' (mapa mundi) ou nome de continente
+  mapView:'world',
+  // Compat: saOnly mantido para o filtro do dataset, mas controlado pela mapView
   saOnly:false,
   // Estado de ordenação da tabela de países
   countriesSort:{k:'val',dir:-1},
@@ -1028,6 +1098,41 @@ const SOUTH_AMERICA = new Set([
   'ARGENTINA','BOLIVIA','CHILE','COLOMBIA','EQUADOR',
   'GUIANA','PARAGUAI','PERU','URUGUAI','VENEZUELA','BRASIL'
 ]);
+
+// Mapeamento país → continente (nomes exatos como aparecem no dataset).
+const PAIS_CONTINENTE = {
+  // América do Sul
+  'ARGENTINA':'America do Sul','BOLIVIA':'America do Sul','BRASIL':'America do Sul',
+  'CHILE':'America do Sul','COLOMBIA':'America do Sul','EQUADOR':'America do Sul',
+  'GUIANA':'America do Sul','PARAGUAI':'America do Sul','PERU':'America do Sul',
+  'URUGUAI':'America do Sul','VENEZUELA':'America do Sul',
+  // América do Norte / Central
+  'ESTADOS UNIDOS':'America do Norte','MEXICO':'America do Norte','PANAMA':'America do Norte',
+  // Europa
+  'ALEMANHA':'Europa','AUSTRIA':'Europa','BELGICA':'Europa',
+  'BULGARIA, REPUBLICA DA':'Europa','ESPANHA':'Europa','FINLANDIA':'Europa',
+  'FRANCA':'Europa','GRECIA':'Europa','IRLANDA':'Europa','ITALIA':'Europa',
+  'MALTA':'Europa','PAISES BAIXOS (HOLANDA)':'Europa',
+  'POLONIA, REPUBLICA DA':'Europa','PORTUGAL':'Europa','REINO UNIDO':'Europa',
+  'SUICA':'Europa',
+  // Ásia / Oriente Médio
+  'ARABIA SAUDITA':'Asia','BAHREIN, ILHAS':'Asia','CATAR':'Asia','CINGAPURA':'Asia',
+  'COREIA, REPUBLICA DA':'Asia','COVEITE':'Asia',
+  'EMIRADOS ARABES UNIDOS':'Asia','FORMOSA (TAIWAN)':'Asia','INDIA':'Asia',
+  'JAPAO':'Asia','MALASIA':'Asia','TURQUIA':'Asia',
+  // África
+  'AFRICA DO SUL':'Africa','REUNIAO, ILHA':'Africa','SEYCHELLES':'Africa',
+  // Oceania
+  'AUSTRALIA':'Oceania','NOVA ZELANDIA':'Oceania'
+};
+
+const CONTINENT_LIST = ['America do Norte','America do Sul','Europa','Africa','Asia','Oceania'];
+
+// Lista de países de cada continente (calculada a partir do mapa acima).
+const CONTINENT_PAISES = {};
+for (const c of CONTINENT_LIST) CONTINENT_PAISES[c] = [];
+for (const p in PAIS_CONTINENTE) CONTINENT_PAISES[PAIS_CONTINENTE[p]].push(p);
+
 
 // Mapeamento UF -> Nome completo do estado.
 const UF_NOME = {
@@ -1166,9 +1271,11 @@ function matchRow(r) {
   const ufStr = DATA.ufs[r[C.uf]];
   if (state.activeTab === 'export') {
     if (ufStr !== 'EX') return false;
-    if (state.saOnly) {
+    // Drill-down: filtra apenas o continente atual quando aplicável
+    if (state.mapView !== 'world') {
       const pais = DATA.paises[r[C.pa]];
-      if (!SOUTH_AMERICA.has(pais)) return false;
+      const cont = PAIS_CONTINENTE[pais];
+      if (cont !== state.mapView) return false;
     }
   } else {
     // Aba Brasil: por padrão exibe tudo (incluindo EX para legado).
@@ -1224,9 +1331,10 @@ function matchRowComp(r, comp) {
   const ufStr = DATA.ufs[r[C.uf]];
   if (state.activeTab === 'export') {
     if (ufStr !== 'EX') return false;
-    if (state.saOnly) {
+    if (state.mapView !== 'world') {
       const pais = DATA.paises[r[C.pa]];
-      if (!SOUTH_AMERICA.has(pais)) return false;
+      const cont = PAIS_CONTINENTE[pais];
+      if (cont !== state.mapView) return false;
     }
   }
   if (state.ufs.size && !state.ufs.has(ufStr)) return false;
@@ -1434,17 +1542,34 @@ function buildMap() {
 }
 let lastMapInfo={};
 function renderMap(agg) {
-  // Se aba Exportações ativa, renderiza mapa AS em vez do Brasil
+  // Aba Exportações: roteia para mundo ou continente conforme mapView
   if (state.activeTab === 'export') {
-    const eAgg = aggregateExports();
-    renderSAMap(eAgg);
-    let max = 0;
-    for (const p in eAgg.porPais) {
-      if (p === 'BRASIL') continue;
-      if (eAgg.porPais[p].val > max) max = eAgg.porPais[p].val;
+    if (state.mapView === 'world') {
+      renderWorldMap();
+    } else {
+      // drill em continente
+      if (state.mapView === 'America do Sul') {
+        const eAgg = aggregateExports();
+        renderSAMap(eAgg);
+        let max = 0;
+        for (const p in eAgg.porPais) {
+          if (p === 'BRASIL') continue;
+          if (eAgg.porPais[p].val > max) max = eAgg.porPais[p].val;
+        }
+        document.getElementById('legend_min').textContent = 'R$ 0';
+        document.getElementById('legend_max').textContent = fmtMoneyShort(max);
+      } else {
+        renderContinentGrid(state.mapView);
+        // Calcula max do continente para a legenda
+        const eAgg = aggregateExports();
+        let max = 0;
+        for (const p of (CONTINENT_PAISES[state.mapView] || [])) {
+          if (eAgg.porPais[p] && eAgg.porPais[p].val > max) max = eAgg.porPais[p].val;
+        }
+        document.getElementById('legend_min').textContent = 'R$ 0';
+        document.getElementById('legend_max').textContent = fmtMoneyShort(max);
+      }
     }
-    document.getElementById('legend_min').textContent = 'R$ 0';
-    document.getElementById('legend_max').textContent = fmtMoneyShort(max);
     return;
   }
   // Calcula ticket médio por UF antes de tudo
@@ -2832,7 +2957,8 @@ function aggregateExports() {
       if (!ok) continue;
     }
     const pais = DATA.paises[r[C.pa]] || '?';
-    if (state.saOnly && !SOUTH_AMERICA.has(pais)) continue;
+    // aggregateExports é usada para várias visões — aqui retornamos TODOS os países.
+    // O filtro de continente é aplicado pelos consumidores que precisam.
     if (!out[pais]) out[pais] = {cnt:0, val:0, qtd:0, clientes:new Set()};
     if (r[C.tr] !== 1) out[pais].cnt++;
     out[pais].val += r[C.val];
@@ -2875,6 +3001,142 @@ function renderExportKPIs(eAgg) {
     + '<div class="kpi-value">' + fmtInt(Math.round(eAgg.totQtd)) + '</div>'
     + '<div class="kpi-sub">itens vendidos</div>'
     + '</div>';
+}
+
+// Cores do gradiente reutilizadas em world/continent
+const HEAT_STOPS = [
+  {at:0.00, c:[26,26,26]},
+  {at:0.10, c:[60,12,12]},
+  {at:0.25, c:[127,29,29]},
+  {at:0.45, c:[185,28,28]},
+  {at:0.65, c:[220,38,38]},
+  {at:0.85, c:[239,68,68]},
+  {at:1.00, c:[251,146,60]}
+];
+function heatColor(t) {
+  t = Math.sqrt(Math.max(0, Math.min(1, t)));
+  for (let i=1; i<HEAT_STOPS.length; i++) {
+    if (t <= HEAT_STOPS[i].at) {
+      const a = HEAT_STOPS[i-1], b = HEAT_STOPS[i];
+      const k = (t - a.at) / (b.at - a.at || 1);
+      return [Math.round(a.c[0]+(b.c[0]-a.c[0])*k),
+              Math.round(a.c[1]+(b.c[1]-a.c[1])*k),
+              Math.round(a.c[2]+(b.c[2]-a.c[2])*k)];
+    }
+  }
+  return HEAT_STOPS[HEAT_STOPS.length-1].c;
+}
+
+// Agrega exportações por continente (totalizando os países).
+function aggregateByContinent() {
+  // Sem filtro saOnly — queremos TODOS os países para a visão mundo.
+  const prevSaOnly = state.saOnly;
+  state.saOnly = false;
+  const eAgg = aggregateExports();
+  state.saOnly = prevSaOnly;
+  const out = {};
+  for (const c of CONTINENT_LIST) out[c] = { val:0, cnt:0, paises:0 };
+  for (const p in eAgg.porPais) {
+    const c = PAIS_CONTINENTE[p];
+    if (!c) continue;  // país sem continente (raro)
+    out[c].val += eAgg.porPais[p].val;
+    out[c].cnt += eAgg.porPais[p].cnt;
+    out[c].paises += 1;
+  }
+  return out;
+}
+
+function renderWorldMap() {
+  const cAgg = aggregateByContinent();
+  let max = 0;
+  for (const c in cAgg) if (cAgg[c].val > max) max = cAgg[c].val;
+  const svg = document.getElementById('world_map');
+  if (!svg) return;
+  svg.querySelectorAll('.continent').forEach(p => {
+    const c = p.dataset.c;
+    const v = cAgg[c] ? cAgg[c].val : 0;
+    const t = max ? v / max : 0;
+    const col = heatColor(t);
+    p.setAttribute('fill', 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')');
+    let title = p.querySelector('title');
+    if (!title) {
+      title = document.createElementNS('http://www.w3.org/2000/svg','title');
+      p.appendChild(title);
+    }
+    if (cAgg[c]) {
+      title.textContent = c + ' — ' + fmtMoney(cAgg[c].val) + ' · '
+        + fmtInt(cAgg[c].cnt) + ' pedidos · ' + cAgg[c].paises + ' país(es)';
+    } else {
+      title.textContent = c;
+    }
+  });
+  document.getElementById('legend_max').textContent = fmtMoneyShort(max);
+  document.getElementById('legend_min').textContent = 'R$ 0';
+}
+
+function drillContinent(continent) {
+  state.mapView = continent;
+  // Filtros: saOnly só liga quando drill em América do Sul, para outros não filtramos
+  // a tabela pelo saOnly geral — usamos lógica específica por país do continente.
+  state.saOnly = (continent === 'America do Sul');
+  // Atualiza breadcrumb
+  const bc = document.getElementById('map_breadcrumb');
+  if (bc) {
+    bc.innerHTML = '<button type="button" class="bc-link" data-view="world">🌎 Mundo</button>'
+      + '<span class="bc-sep">›</span>'
+      + '<button type="button" class="bc-link active" data-view="' + escHtml(continent) + '">' + escHtml(continent) + '</button>';
+    bc.querySelectorAll('.bc-link').forEach(b => {
+      b.onclick = () => { if (b.dataset.view === 'world') backToWorld(); };
+    });
+  }
+  // Esconde mundi, mostra view do continente
+  document.getElementById('world_map').style.display = 'none';
+  document.getElementById('continent_view').style.display = '';
+  if (continent === 'America do Sul') {
+    document.getElementById('sa_map').style.display = '';
+    document.getElementById('continent_grid').style.display = 'none';
+  } else {
+    document.getElementById('sa_map').style.display = 'none';
+    document.getElementById('continent_grid').style.display = '';
+    renderContinentGrid(continent);
+  }
+  renderAll();
+}
+
+function backToWorld() {
+  state.mapView = 'world';
+  state.saOnly = false;
+  const bc = document.getElementById('map_breadcrumb');
+  if (bc) {
+    bc.innerHTML = '<button type="button" class="bc-link active" data-view="world">🌎 Mundo</button>';
+  }
+  document.getElementById('world_map').style.display = '';
+  document.getElementById('continent_view').style.display = 'none';
+  renderAll();
+}
+
+function renderContinentGrid(continent) {
+  const eAgg = aggregateExports();
+  const paises = CONTINENT_PAISES[continent] || [];
+  const cards = paises.map(p => {
+    const d = eAgg.porPais[p];
+    return { pais: p, val: d ? d.val : 0, cnt: d ? d.cnt : 0 };
+  }).sort((a,b) => b.val - a.val);
+  const max = Math.max.apply(null, cards.map(c => c.val).concat([0]));
+  const grid = document.getElementById('continent_grid');
+  if (!grid) return;
+  grid.innerHTML = cards.map(c => {
+    const t = max ? c.val / max : 0;
+    const col = heatColor(t);
+    const flagColor = c.val > 0 ? 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')' : 'var(--border)';
+    const empty = c.val === 0 ? ' empty' : '';
+    return '<div class="country-card' + empty + '" data-pais="' + escHtml(c.pais) + '">'
+      + '<div class="cc-flag" style="background:' + flagColor + '"></div>'
+      + '<div class="cc-name">' + escHtml(c.pais) + '</div>'
+      + '<div class="cc-val">' + (c.val > 0 ? fmtMoneyShort(c.val) : '—') + '</div>'
+      + '<div class="cc-sub">' + (c.cnt > 0 ? fmtInt(c.cnt) + ' pedidos' : 'sem vendas') + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 function renderSAMap(eAgg) {
@@ -3006,7 +3268,7 @@ function switchTab(tab) {
   });
   // Swap visual: mapa BR vs mapa AS, controles do mapa, título, e toggle SA
   const mapBr = document.getElementById('map_brasil_wrap');
-  const mapSa = document.getElementById('map_sa_wrap');
+  const mapWorld = document.getElementById('map_world_wrap');
   const metricToggle = document.getElementById('map_metric');
   const aggToggle = document.getElementById('map_agg');
   const saToggle = document.getElementById('sa_only_toggle');
@@ -3015,16 +3277,20 @@ function switchTab(tab) {
   const exPanel = document.getElementById('ex_panel');
   if (tab === 'export') {
     if (mapBr) mapBr.style.display = 'none';
-    if (mapSa) mapSa.style.display = '';
+    if (mapWorld) mapWorld.style.display = '';
+    // Reset para mundo quando entra na aba Export
+    state.mapView = 'world';
+    state.saOnly = false;
+    renderWorldMap();
     if (metricToggle) metricToggle.style.display = 'none';
     if (aggToggle) aggToggle.style.display = 'none';
-    if (saToggle) saToggle.style.display = 'flex';
+    if (saToggle) saToggle.style.display = 'none';  // substituído pelo breadcrumb
     if (mapTitle) mapTitle.textContent = 'Mapa de Calor — América do Sul';
     if (estadosTitle) estadosTitle.textContent = 'Países de Atuação';
     if (exPanel) exPanel.style.display = 'none';
   } else {
     if (mapBr) mapBr.style.display = '';
-    if (mapSa) mapSa.style.display = 'none';
+    if (mapWorld) mapWorld.style.display = 'none';
     if (metricToggle) metricToggle.style.display = '';
     if (aggToggle) aggToggle.style.display = '';
     if (saToggle) saToggle.style.display = 'none';
@@ -3097,7 +3363,13 @@ function init() {
       renderAll();
     };
   }
-  // Click num país do SVG: highlight visual
+  // Click num continente: drill-down
+  document.querySelectorAll('#world_map .continent').forEach(function(c) {
+    c.addEventListener('click', function() {
+      drillContinent(c.dataset.c);
+    });
+  });
+  // Click num país do SVG (AS): highlight visual
   document.querySelectorAll('#sa_map .pais').forEach(function(p) {
     p.addEventListener('click', function() {
       if (p.dataset.p === 'BRASIL') return;

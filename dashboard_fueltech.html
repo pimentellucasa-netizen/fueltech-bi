@@ -709,8 +709,8 @@
 
     <div class="row r2">
       <div class="panel">
-        <h2>
-          Mapa de Calor — Brasil
+        <h2 id="map_title_wrap">
+          <span id="map_title">Mapa de Calor — Brasil</span>
           <div class="metric-toggle" id="map_metric">
             <button class="active" data-m="val">Faturamento</button>
             <button data-m="cnt">Pedidos</button>
@@ -721,19 +721,51 @@
             <button data-a="regiao">Por Região</button>
           </div>
         </h2>
-        <div class="map-wrap">
+        <!-- Mapa Brasil (default) -->
+        <div class="map-wrap" id="map_brasil_wrap">
           <svg id="map" viewBox="0 0 800 700" xmlns="http://www.w3.org/2000/svg"></svg>
           <div class="tooltip" id="tooltip"></div>
         </div>
+        <!-- Mapa América do Sul (apenas quando aba Exportações) -->
+        <div class="map-wrap" id="map_sa_wrap" style="display:none">
+          <svg class="sa-map-svg" id="sa_map" viewBox="0 0 400 520" xmlns="http://www.w3.org/2000/svg">
+            <path class="pais brazil-home" data-p="BRASIL" d="M 215 80 L 280 75 L 320 95 L 345 130 L 360 175 L 365 220 L 360 270 L 340 310 L 305 335 L 270 345 L 235 340 L 215 315 L 200 285 L 195 240 L 200 195 L 210 145 Z"/>
+            <text class="pais-label" x="280" y="200">BRASIL</text>
+            <path class="pais" data-p="VENEZUELA" d="M 175 60 L 230 55 L 260 70 L 250 95 L 220 100 L 185 95 L 170 80 Z"/>
+            <text class="pais-label" x="215" y="80">VEN</text>
+            <path class="pais" data-p="COLOMBIA" d="M 130 75 L 175 60 L 200 90 L 195 130 L 175 155 L 150 145 L 130 115 Z"/>
+            <text class="pais-label" x="165" y="110">COL</text>
+            <path class="pais" data-p="EQUADOR" d="M 110 145 L 150 145 L 155 175 L 130 180 L 110 165 Z"/>
+            <text class="pais-label" x="135" y="167">EQU</text>
+            <path class="pais" data-p="PERU" d="M 110 180 L 175 175 L 200 215 L 195 270 L 170 290 L 130 270 L 110 230 Z"/>
+            <text class="pais-label" x="155" y="240">PERU</text>
+            <path class="pais" data-p="BOLIVIA" d="M 195 215 L 245 215 L 270 250 L 260 290 L 220 295 L 195 270 Z"/>
+            <text class="pais-label" x="232" y="260">BOL</text>
+            <path class="pais" data-p="CHILE" d="M 130 270 L 175 290 L 180 360 L 175 420 L 165 470 L 145 480 L 135 440 L 130 380 L 125 320 Z"/>
+            <text class="pais-label" x="155" y="380">CHI</text>
+            <path class="pais" data-p="PARAGUAI" d="M 220 295 L 270 290 L 275 325 L 245 335 L 220 325 Z"/>
+            <text class="pais-label" x="248" y="316">PAR</text>
+            <path class="pais" data-p="URUGUAI" d="M 245 350 L 290 345 L 295 375 L 265 380 L 245 370 Z"/>
+            <text class="pais-label" x="270" y="365">URU</text>
+            <path class="pais" data-p="ARGENTINA" d="M 175 290 L 220 295 L 245 335 L 245 370 L 240 420 L 220 460 L 195 480 L 175 470 L 170 420 L 175 360 Z"/>
+            <text class="pais-label" x="208" y="395">ARG</text>
+            <path class="pais" data-p="GUIANA" d="M 250 60 L 285 65 L 290 85 L 270 90 L 255 80 Z"/>
+            <text class="pais-label" x="270" y="78">GUI</text>
+          </svg>
+        </div>
         <div class="map-legend">
           <span id="legend_min">0</span>
-          <div class="gradient"></div>
+          <div class="gradient" id="map_legend_bar"></div>
           <span id="legend_max">0</span>
         </div>
         <div id="ex_panel" style="margin-top:10px;padding:10px;background:#0a0a0a;border-radius:4px;display:none">
           <strong>EXPORTAÇÃO</strong><span class="ex-badge" id="ex_badge"></span>
           <div id="ex_details" style="margin-top:6px;font-size:11px;color:var(--muted)"></div>
         </div>
+        <!-- Toggle "Apenas América do Sul" — só aparece na aba Export -->
+        <button type="button" class="sa-only-toggle" id="sa_only_toggle" style="display:none;margin-top:10px;width:100%;justify-content:center" title="Filtrar somente países da América do Sul">
+          Apenas América do Sul
+        </button>
       </div>
 
       <div class="panel">
@@ -778,7 +810,7 @@
     <div class="row r2" id="row_vend_detail">
       <div class="panel">
         <h2>
-          Estados de Atuação
+          <span id="estados_paises_title">Estados de Atuação</span>
           <span id="vend_uf_summary" style="font-size:11px;color:var(--muted);font-weight:400"></span>
           <button type="button" class="btn-ver-tudo" id="btn_ver_estados">Ver todos</button>
         </h2>
@@ -823,96 +855,6 @@
       </div>
     </div>
   </main>
-</div>
-
-<!-- ===== ABA: Exportações ===== -->
-<div id="tab_export">
-  <div class="export-head">
-    <div class="export-title">
-      <span>🌎</span> <span class="accent">Exportações</span> — Vendas Internacionais
-    </div>
-    <div class="export-controls">
-      <button type="button" class="sa-only-toggle" id="sa_only_toggle" title="Filtrar somente países da América do Sul">
-        Apenas América do Sul
-      </button>
-    </div>
-  </div>
-
-  <div class="export-kpis" id="export_kpis"></div>
-
-  <div class="export-grid">
-    <div class="sa-map-wrap">
-      <h2>
-        <span>Mapa — América do Sul</span>
-        <span style="font-size:10px;color:var(--muted);font-weight:400" id="sa_map_summary"></span>
-      </h2>
-      <svg class="sa-map-svg" id="sa_map" viewBox="0 0 400 520" xmlns="http://www.w3.org/2000/svg">
-  <!-- Brasil (matriz, cinza escuro) -->
-  <path class="pais brazil-home" data-p="BRASIL" d="M 215 80 L 280 75 L 320 95 L 345 130 L 360 175 L 365 220 L 360 270 L 340 310 L 305 335 L 270 345 L 235 340 L 215 315 L 200 285 L 195 240 L 200 195 L 210 145 Z"/>
-  <text class="pais-label" x="280" y="200">BRASIL</text>
-
-  <!-- Venezuela -->
-  <path class="pais" data-p="VENEZUELA" d="M 175 60 L 230 55 L 260 70 L 250 95 L 220 100 L 185 95 L 170 80 Z"/>
-  <text class="pais-label" x="215" y="80">VEN</text>
-
-  <!-- Colombia -->
-  <path class="pais" data-p="COLOMBIA" d="M 130 75 L 175 60 L 200 90 L 195 130 L 175 155 L 150 145 L 130 115 Z"/>
-  <text class="pais-label" x="165" y="110">COL</text>
-
-  <!-- Equador -->
-  <path class="pais" data-p="EQUADOR" d="M 110 145 L 150 145 L 155 175 L 130 180 L 110 165 Z"/>
-  <text class="pais-label" x="135" y="167">EQU</text>
-
-  <!-- Peru -->
-  <path class="pais" data-p="PERU" d="M 110 180 L 175 175 L 200 215 L 195 270 L 170 290 L 130 270 L 110 230 Z"/>
-  <text class="pais-label" x="155" y="240">PERU</text>
-
-  <!-- Bolivia -->
-  <path class="pais" data-p="BOLIVIA" d="M 195 215 L 245 215 L 270 250 L 260 290 L 220 295 L 195 270 Z"/>
-  <text class="pais-label" x="232" y="260">BOL</text>
-
-  <!-- Chile (estreito vertical) -->
-  <path class="pais" data-p="CHILE" d="M 130 270 L 175 290 L 180 360 L 175 420 L 165 470 L 145 480 L 135 440 L 130 380 L 125 320 Z"/>
-  <text class="pais-label" x="155" y="380">CHI</text>
-
-  <!-- Paraguai -->
-  <path class="pais" data-p="PARAGUAI" d="M 220 295 L 270 290 L 275 325 L 245 335 L 220 325 Z"/>
-  <text class="pais-label" x="248" y="316">PAR</text>
-
-  <!-- Uruguai -->
-  <path class="pais" data-p="URUGUAI" d="M 245 350 L 290 345 L 295 375 L 265 380 L 245 370 Z"/>
-  <text class="pais-label" x="270" y="365">URU</text>
-
-  <!-- Argentina -->
-  <path class="pais" data-p="ARGENTINA" d="M 175 290 L 220 295 L 245 335 L 245 370 L 240 420 L 220 460 L 195 480 L 175 470 L 170 420 L 175 360 Z"/>
-  <text class="pais-label" x="208" y="395">ARG</text>
-
-  <!-- Guiana (Guyana) -->
-  <path class="pais" data-p="GUIANA" d="M 250 60 L 285 65 L 290 85 L 270 90 L 255 80 Z"/>
-  <text class="pais-label" x="270" y="78">GUI</text>
-</svg>
-      <div class="legend">
-        <span>0</span>
-        <div class="legend-bar"></div>
-        <span id="sa_legend_max">—</span>
-      </div>
-    </div>
-
-    <div class="countries-panel">
-      <h2 id="countries_panel_title">Top Países por Faturamento</h2>
-      <table class="countries-table" id="countries_table">
-        <thead>
-          <tr>
-            <th data-k="pais">País</th>
-            <th data-k="cnt" class="num">Pedidos</th>
-            <th data-k="val" class="num">Faturamento</th>
-            <th data-k="pct" class="num">%</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
 </div>
 
 <div class="range-popover" id="range_popover" role="dialog" aria-modal="true">
@@ -1220,7 +1162,19 @@ function inRange(r, from, to) {
 function matchRow(r) {
   if (!state.incluirDev && r[C.tr]===1) return false;
   if (!inRange(r, state.rangeFrom, state.rangeTo)) return false;
-  if (state.ufs.size && !state.ufs.has(DATA.ufs[r[C.uf]])) return false;
+  // Filtro de aba: Brasil mostra só vendas nacionais; Exportações só EX
+  const ufStr = DATA.ufs[r[C.uf]];
+  if (state.activeTab === 'export') {
+    if (ufStr !== 'EX') return false;
+    if (state.saOnly) {
+      const pais = DATA.paises[r[C.pa]];
+      if (!SOUTH_AMERICA.has(pais)) return false;
+    }
+  } else {
+    // Aba Brasil: por padrão exibe tudo (incluindo EX para legado).
+    // Quando o usuário usa filtros de UF, eles já cobrem o EX se quiser ver.
+  }
+  if (state.ufs.size && !state.ufs.has(ufStr)) return false;
   if (state.tabelas.size && !state.tabelas.has(r[C.tb])) return false;
   if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) return false;
   const cli = CLIENT_BY_IDX[r[C.cl]];
@@ -1267,7 +1221,15 @@ function shiftedPeriod() {
 function matchRowComp(r, comp) {
   if (!state.incluirDev && r[C.tr]===1) return false;
   if (!inRange(r, comp.rangeFrom, comp.rangeTo)) return false;
-  if (state.ufs.size && !state.ufs.has(DATA.ufs[r[C.uf]])) return false;
+  const ufStr = DATA.ufs[r[C.uf]];
+  if (state.activeTab === 'export') {
+    if (ufStr !== 'EX') return false;
+    if (state.saOnly) {
+      const pais = DATA.paises[r[C.pa]];
+      if (!SOUTH_AMERICA.has(pais)) return false;
+    }
+  }
+  if (state.ufs.size && !state.ufs.has(ufStr)) return false;
   if (state.tabelas.size && !state.tabelas.has(r[C.tb])) return false;
   if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) return false;
   const cli = CLIENT_BY_IDX[r[C.cl]];
@@ -1472,6 +1434,19 @@ function buildMap() {
 }
 let lastMapInfo={};
 function renderMap(agg) {
+  // Se aba Exportações ativa, renderiza mapa AS em vez do Brasil
+  if (state.activeTab === 'export') {
+    const eAgg = aggregateExports();
+    renderSAMap(eAgg);
+    let max = 0;
+    for (const p in eAgg.porPais) {
+      if (p === 'BRASIL') continue;
+      if (eAgg.porPais[p].val > max) max = eAgg.porPais[p].val;
+    }
+    document.getElementById('legend_min').textContent = 'R$ 0';
+    document.getElementById('legend_max').textContent = fmtMoneyShort(max);
+    return;
+  }
   // Calcula ticket médio por UF antes de tudo
   for (const uf in agg.porUf) {
     const u = agg.porUf[uf];
@@ -1851,6 +1826,41 @@ function vendFilterLabel() {
   return parts.length ? ' — '+parts.join(' · ') : ' — (todos os filtros)';
 }
 function renderVendUfs(agg) {
+  // Aba Exportações: mostra Top 10 PAÍSES em vez de estados
+  if (state.activeTab === 'export') {
+    const eAgg = aggregateExports();
+    const all = Object.entries(eAgg.porPais)
+      .filter(e => e[1].val > 0 || e[1].cnt > 0)
+      .sort((a,b) => b[1].val - a[1].val);
+    const top = all.slice(0, 10);
+    const labels = top.map(e => e[0]);
+    const data = top.map(e => e[1].val);
+    const cnts = top.map(e => e[1].cnt);
+    document.getElementById('vend_uf_summary').textContent =
+      vendFilterLabel() + ' · ' + all.length + ' país(es) · top 10';
+    const wrap2 = document.getElementById('chart_vend_ufs').parentElement;
+    if (wrap2) wrap2.style.height = '';
+    const cfg = {
+      type: 'bar',
+      data: { labels, datasets: [{ data, backgroundColor: '#DC2626', borderRadius: 3 }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => fmtMoney(c.parsed.x) + ' · ' + fmtInt(cnts[c.dataIndex]) + ' pedidos' } }
+        },
+        scales: {
+          x: { ticks: { callback: v => fmtMoneyShort(v), font: { size: 9 } }, grid: { color: gridColor() } },
+          y: { grid: { display: false }, ticks: { font: { size: 10 }, autoSkip: false, maxRotation: 0 } }
+        }
+      }
+    };
+    if (charts.vendUfs) { charts.vendUfs.destroy(); charts.vendUfs = null; }
+    charts.vendUfs = new Chart(document.getElementById('chart_vend_ufs'), cfg);
+    return;
+  }
   // Filtra estados com val=0 e ordena
   const allEntries = Object.entries(agg.porUf)
     .filter(e => e[1] && (e[1].val > 0 || e[1].cnt > 0))
@@ -2605,10 +2615,6 @@ let debounceTimer;
 function renderAll() {
   clearTimeout(debounceTimer);
   debounceTimer=setTimeout(()=>{
-    // Se a aba ativa é Exportações, renderiza também o tab dela
-    if (state.activeTab === 'export') {
-      renderExportTab();
-    }
     const rows=filtered(); const agg=aggregate(rows);
     const comp=filteredComparison();
     const aggComp = comp ? aggregate(comp.rows) : null;
@@ -2618,6 +2624,7 @@ function renderAll() {
     renderTabelas(agg); renderVends(agg); renderDevs(agg);
     renderVendUfs(agg); renderVendTabelas(agg);
     renderTable(rows);
+    updateExportTabBadge();
   },40);
 }
 
@@ -2986,21 +2993,45 @@ function renderExportTab() {
   if (c) c.textContent = fmtInt(eAgg.totCnt) + ' pedidos';
 }
 
+function updateExportTabBadge() {
+  const c = document.getElementById('tab_export_count');
+  if (!c) return;
+  const eAgg = aggregateExports();
+  c.textContent = fmtInt(eAgg.totCnt) + ' pedidos';
+}
 function switchTab(tab) {
   state.activeTab = tab;
-  const tabBrasil = document.getElementById('tab_brasil');
-  const tabExport = document.getElementById('tab_export');
   document.querySelectorAll('#tabs_bar button').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
-  if (tab === 'brasil') {
-    if (tabBrasil) tabBrasil.style.display = '';
-    if (tabExport) tabExport.classList.remove('active');
+  // Swap visual: mapa BR vs mapa AS, controles do mapa, título, e toggle SA
+  const mapBr = document.getElementById('map_brasil_wrap');
+  const mapSa = document.getElementById('map_sa_wrap');
+  const metricToggle = document.getElementById('map_metric');
+  const aggToggle = document.getElementById('map_agg');
+  const saToggle = document.getElementById('sa_only_toggle');
+  const mapTitle = document.getElementById('map_title');
+  const estadosTitle = document.getElementById('estados_paises_title');
+  const exPanel = document.getElementById('ex_panel');
+  if (tab === 'export') {
+    if (mapBr) mapBr.style.display = 'none';
+    if (mapSa) mapSa.style.display = '';
+    if (metricToggle) metricToggle.style.display = 'none';
+    if (aggToggle) aggToggle.style.display = 'none';
+    if (saToggle) saToggle.style.display = 'flex';
+    if (mapTitle) mapTitle.textContent = 'Mapa de Calor — América do Sul';
+    if (estadosTitle) estadosTitle.textContent = 'Países de Atuação';
+    if (exPanel) exPanel.style.display = 'none';
   } else {
-    if (tabBrasil) tabBrasil.style.display = 'none';
-    if (tabExport) tabExport.classList.add('active');
-    renderExportTab();
+    if (mapBr) mapBr.style.display = '';
+    if (mapSa) mapSa.style.display = 'none';
+    if (metricToggle) metricToggle.style.display = '';
+    if (aggToggle) aggToggle.style.display = '';
+    if (saToggle) saToggle.style.display = 'none';
+    if (mapTitle) mapTitle.textContent = 'Mapa de Calor — Brasil';
+    if (estadosTitle) estadosTitle.textContent = 'Estados de Atuação';
   }
+  renderAll();
 }
 
 // ===== INIT =====
@@ -3063,33 +3094,15 @@ function init() {
       state.saOnly = !state.saOnly;
       saT.classList.toggle('active', state.saOnly);
       saT.textContent = state.saOnly ? '✓ Apenas América do Sul' : 'Apenas América do Sul';
-      renderExportTab();
+      renderAll();
     };
   }
-  // Sort da tabela de países
-  document.querySelectorAll('#countries_table th').forEach(function(th) {
-    th.onclick = function() {
-      const k = th.dataset.k;
-      if (state.countriesSort.k === k) state.countriesSort.dir *= -1;
-      else { state.countriesSort.k = k; state.countriesSort.dir = (k === 'pais') ? 1 : -1; }
-      renderExportTab();
-    };
-  });
-  // Click num país do SVG: filtra a tabela (destaca no painel)
+  // Click num país do SVG: highlight visual
   document.querySelectorAll('#sa_map .pais').forEach(function(p) {
     p.addEventListener('click', function() {
-      const pais = p.dataset.p;
-      if (pais === 'BRASIL') return;
-      // Toggle highlight
+      if (p.dataset.p === 'BRASIL') return;
       document.querySelectorAll('#sa_map .pais').forEach(function(x) { x.classList.remove('selected'); });
       p.classList.add('selected');
-      // Scroll/destaca a linha correspondente
-      const tr = document.querySelector('#countries_table tr[data-pais="' + pais + '"]');
-      if (tr) {
-        document.querySelectorAll('#countries_table tr').forEach(function(r) { r.style.background = ''; });
-        tr.style.background = 'var(--table-row-hover)';
-        tr.scrollIntoView({behavior:'smooth', block:'nearest'});
-      }
     });
   });
   const meSearch = document.getElementById('me_search');

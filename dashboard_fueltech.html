@@ -473,14 +473,17 @@
   .map-breadcrumb .bc-link.active{background:var(--orange);color:#000;border-color:var(--orange)}
   .map-breadcrumb .bc-sep{color:var(--muted);font-size:10px}
 
-  .world-map-svg{width:100%;height:auto;display:block;cursor:default}
-  .world-map-svg .continent{stroke:var(--bg);stroke-width:2;cursor:pointer;
-    transition:filter .15s,stroke-width .15s}
-  .world-map-svg .continent:hover{stroke-width:3;filter:brightness(1.3)}
-  .world-map-svg .continent.selected{stroke:var(--orange);stroke-width:3}
-  .world-map-svg .continent-label{fill:#fff;font-size:11px;font-weight:800;
-    letter-spacing:.6px;text-anchor:middle;pointer-events:none;
-    text-shadow:0 0 4px rgba(0,0,0,.8)}
+  .world-map-svg{width:100%;height:auto;display:block;cursor:default;
+    background:linear-gradient(180deg,#0a1a2e 0%,#0d0d0d 100%);
+    border-radius:6px}
+  .world-map-svg .continent{stroke:rgba(255,255,255,.15);stroke-width:1.5;cursor:pointer;
+    transition:filter .15s,stroke-width .15s,opacity .2s}
+  .world-map-svg .continent:hover{stroke:#fff;stroke-width:2.5;filter:brightness(1.15)}
+  .world-map-svg .continent.selected{stroke:var(--orange);stroke-width:3;
+    filter:drop-shadow(0 0 8px rgba(220,38,38,.6))}
+  .world-map-svg .continent-label{fill:#fff;font-size:13px;font-weight:800;
+    letter-spacing:.8px;text-anchor:middle;pointer-events:none;
+    text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.6)}
 
   /* Grid de países dentro de um continente */
   .country-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
@@ -769,25 +772,42 @@
             <button type="button" class="bc-link active" data-view="world">🌎 Mundo</button>
           </div>
           <!-- Visão World: 6 continentes em silhuetas/blocos -->
-          <svg class="world-map-svg" id="world_map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
-            <!-- América do Norte -->
-            <path class="continent" data-c="America do Norte" d="M 60 70 L 200 60 L 280 90 L 290 160 L 240 220 L 180 260 L 130 240 L 80 180 L 50 120 Z"/>
-            <text class="continent-label" x="170" y="160">AMÉRICA DO NORTE</text>
-            <!-- América do Sul -->
-            <path class="continent" data-c="America do Sul" d="M 220 270 L 290 260 L 310 320 L 290 410 L 250 470 L 210 470 L 195 410 L 200 340 Z"/>
-            <text class="continent-label" x="250" y="370">AMÉRICA DO SUL</text>
-            <!-- Europa -->
-            <path class="continent" data-c="Europa" d="M 460 80 L 560 70 L 590 110 L 580 170 L 540 200 L 480 200 L 450 160 L 440 110 Z"/>
-            <text class="continent-label" x="510" y="140">EUROPA</text>
-            <!-- África -->
-            <path class="continent" data-c="Africa" d="M 470 220 L 580 220 L 610 290 L 600 380 L 540 450 L 490 440 L 460 360 L 450 280 Z"/>
-            <text class="continent-label" x="530" y="340">ÁFRICA</text>
-            <!-- Ásia -->
-            <path class="continent" data-c="Asia" d="M 600 60 L 800 60 L 880 120 L 900 220 L 820 270 L 720 250 L 640 200 L 600 130 Z"/>
-            <text class="continent-label" x="750" y="160">ÁSIA</text>
-            <!-- Oceania -->
-            <path class="continent" data-c="Oceania" d="M 800 340 L 920 340 L 940 400 L 900 440 L 830 440 L 800 400 Z"/>
-            <text class="continent-label" x="870" y="395">OCEANIA</text>
+          <svg class="world-map-svg" id="world_map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+            <!-- Oceano de fundo (sutil) -->
+            <rect width="1000" height="500" fill="#0a1628" opacity="0.3"/>
+
+            <!-- AMÉRICA DO NORTE (vermelho) — Canadá + USA + México + Caribe + Alasca -->
+            <path class="continent" data-c="America do Norte" fill="#E74C3C"
+              d="M 70 90 Q 90 70, 130 75 L 175 80 Q 220 78, 260 90 L 295 110 Q 305 130, 300 155 L 285 180 Q 260 195, 235 215 L 215 240 Q 205 260, 190 270 L 165 275 Q 145 268, 135 250 L 130 230 Q 120 215, 105 200 L 85 180 Q 70 155, 65 130 Q 60 110, 70 90 Z
+                 M 180 175 Q 195 178, 200 195 Q 195 215, 180 220 Q 170 215, 168 198 Q 170 180, 180 175 Z" />
+            <text class="continent-label" x="180" y="160">AMÉRICA DO NORTE</text>
+
+            <!-- AMÉRICA DO SUL (laranja) — formato cone alongado -->
+            <path class="continent" data-c="America do Sul" fill="#F39C12"
+              d="M 230 280 Q 250 273, 285 278 L 315 285 Q 330 305, 333 335 L 330 380 Q 325 415, 305 445 L 280 470 Q 260 478, 245 470 L 230 450 Q 218 420, 215 390 L 218 350 Q 222 320, 228 300 Z" />
+            <text class="continent-label" x="275" y="370">AMÉRICA DO SUL</text>
+
+            <!-- EUROPA (turquesa) — pequena, irregular -->
+            <path class="continent" data-c="Europa" fill="#1ABC9C"
+              d="M 445 100 Q 470 88, 500 90 L 545 95 Q 575 105, 590 125 L 595 150 Q 590 170, 575 185 L 555 198 Q 530 205, 505 200 L 478 195 Q 455 185, 445 165 L 440 140 Q 438 115, 445 100 Z" />
+            <text class="continent-label" x="515" y="148">EUROPA</text>
+
+            <!-- ÁFRICA (roxo) — formato bolboso no topo, afila no sul -->
+            <path class="continent" data-c="Africa" fill="#9B59B6"
+              d="M 475 220 Q 510 215, 550 218 L 595 225 Q 615 240, 620 265 L 618 295 Q 612 330, 600 360 L 580 395 Q 555 425, 535 445 L 515 452 Q 495 448, 485 430 L 475 405 Q 470 375, 470 345 L 472 310 Q 470 280, 470 255 Q 470 235, 475 220 Z" />
+            <text class="continent-label" x="540" y="340">ÁFRICA</text>
+
+            <!-- ÁSIA (amarelo) — grande, ocupa lado direito superior -->
+            <path class="continent" data-c="Asia" fill="#F1C40F"
+              d="M 590 95 Q 640 78, 700 80 L 780 85 Q 850 90, 905 105 L 945 120 Q 955 145, 945 175 L 920 200 Q 885 220, 845 235 L 800 250 Q 750 260, 705 255 L 660 245 Q 625 235, 605 215 L 595 195 Q 588 175, 588 155 Q 588 125, 590 95 Z
+                 M 705 240 Q 720 250, 720 265 Q 715 280, 700 280 Q 690 270, 695 255 Q 700 245, 705 240 Z" />
+            <text class="continent-label" x="775" y="160">ÁSIA</text>
+
+            <!-- OCEANIA (azul) — Austrália + NZ -->
+            <path class="continent" data-c="Oceania" fill="#3498DB"
+              d="M 810 365 Q 845 355, 890 360 L 930 370 Q 945 385, 942 405 L 925 430 Q 895 445, 865 442 L 830 438 Q 810 425, 805 405 Q 803 380, 810 365 Z
+                 M 950 410 Q 960 415, 958 425 Q 950 432, 945 425 Q 943 415, 950 410 Z" />
+            <text class="continent-label" x="870" y="402">OCEANIA</text>
           </svg>
 
           <!-- Visão Continente: container que troca conteúdo conforme drill-down -->
@@ -823,7 +843,7 @@
         </div>
         <div class="map-legend">
           <span id="legend_min">0</span>
-          <div class="gradient" id="map_legend_bar"></div>
+          <div class="gradient" id="map_legend_bar" style="background:linear-gradient(to right,rgba(255,255,255,.15),rgba(255,255,255,.5),rgba(255,255,255,.95))"></div>
           <span id="legend_max">0</span>
         </div>
         <div id="ex_panel" style="margin-top:10px;padding:10px;background:#0a0a0a;border-radius:4px;display:none">
@@ -3047,6 +3067,8 @@ function aggregateByContinent() {
 }
 
 function renderWorldMap() {
+  // Mantém cor categórica fixa por continente; intensidade do volume é
+  // codificada via OPACITY (mais vendas = mais opaco; sem vendas = ~0.25).
   const cAgg = aggregateByContinent();
   let max = 0;
   for (const c in cAgg) if (cAgg[c].val > max) max = cAgg[c].val;
@@ -3055,19 +3077,20 @@ function renderWorldMap() {
   svg.querySelectorAll('.continent').forEach(p => {
     const c = p.dataset.c;
     const v = cAgg[c] ? cAgg[c].val : 0;
+    // Opacity: 0.25 (sem vendas) → 1.0 (top). Curva sqrt para destaque dos pequenos.
     const t = max ? v / max : 0;
-    const col = heatColor(t);
-    p.setAttribute('fill', 'rgb(' + col[0] + ',' + col[1] + ',' + col[2] + ')');
+    const opacity = t > 0 ? (0.45 + 0.55 * Math.sqrt(t)) : 0.22;
+    p.setAttribute('opacity', opacity.toFixed(2));
     let title = p.querySelector('title');
     if (!title) {
       title = document.createElementNS('http://www.w3.org/2000/svg','title');
       p.appendChild(title);
     }
-    if (cAgg[c]) {
+    if (cAgg[c] && cAgg[c].val > 0) {
       title.textContent = c + ' — ' + fmtMoney(cAgg[c].val) + ' · '
         + fmtInt(cAgg[c].cnt) + ' pedidos · ' + cAgg[c].paises + ' país(es)';
     } else {
-      title.textContent = c;
+      title.textContent = c + ' — sem vendas no recorte';
     }
   });
   document.getElementById('legend_max').textContent = fmtMoneyShort(max);

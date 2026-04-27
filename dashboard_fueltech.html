@@ -792,8 +792,8 @@ const C = Object.fromEntries(DATA.schema.map((s,i)=>[s,i]));
 // Códigos de cliente que representam empresas do grupo Fueltech (intercompany).
 // Vendas para esses códigos são excluídas quando state.brOnly está ativo.
 // Confirmados pelo usuário: subsidiárias internacionais.
-const INTERCOMPANY_CDS = new Set(['010790', '012736', '079909']);
-// 010790 FUELTECH USA LLC | 012736 FT ARGENTINA S.A | 079909 FUELTECH EUROPE B.V.
+const INTERCOMPANY_CDS = new Set(['010790', '079909']);
+// 010790 FUELTECH USA LLC | 079909 FUELTECH EUROPE B.V.
 
 const state = {
   nome:'', cd:'',

@@ -407,6 +407,87 @@
     animation:ldslide 1.4s ease-in-out infinite;
   }
   @keyframes ldslide { 0%{margin-left:-40%} 100%{margin-left:100%} }
+
+  /* ===== Modal genérico ===== */
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+    z-index:500;backdrop-filter:blur(2px)}
+  .modal-backdrop.open{display:flex;align-items:center;justify-content:center;animation:mfadeIn .15s ease}
+  @keyframes mfadeIn { from{opacity:0} to{opacity:1} }
+  .modal-box{background:var(--card-grad);border:1px solid var(--border-strong);
+    border-radius:var(--radius);box-shadow:var(--shadow-md);
+    width:min(900px,92vw);max-height:88vh;display:flex;flex-direction:column;
+    overflow:hidden;border-top:3px solid var(--orange)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg-alt)}
+  .modal-head h3{margin:0;font-size:14px;font-weight:700;color:var(--text);letter-spacing:.3px}
+  .modal-head h3 .badge{font-size:11px;color:var(--muted);font-weight:400;margin-left:8px}
+  .modal-close{background:transparent;border:none;color:var(--muted);
+    font-size:22px;cursor:pointer;padding:0 8px;line-height:1;transition:color .15s}
+  .modal-close:hover{color:var(--orange)}
+  .modal-body{padding:14px 20px;overflow:auto;flex:1}
+  .modal-search{width:100%;padding:9px 12px;background:var(--input-bg);
+    border:1px solid var(--input-border);color:var(--text);
+    border-radius:var(--radius-sm);font-size:13px;font-family:inherit;margin-bottom:10px}
+  .modal-search:focus{outline:none;border-color:var(--orange);
+    box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+  .modal-table{width:100%;border-collapse:collapse;font-size:12px}
+  .modal-table thead{position:sticky;top:0;background:var(--table-head);z-index:1}
+  .modal-table th{padding:8px 10px;text-align:left;font-weight:700;color:var(--text);
+    border-bottom:1px solid var(--border-strong);font-size:11px;
+    text-transform:uppercase;letter-spacing:.5px;cursor:pointer;user-select:none}
+  .modal-table th:hover{color:var(--orange)}
+  .modal-table th.num{text-align:right}
+  .modal-table th.sorted{color:var(--orange)}
+  .modal-table th.sorted::after{content:attr(data-arrow);margin-left:4px;font-size:9px}
+  .modal-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text-soft)}
+  .modal-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .modal-table tbody tr{cursor:pointer;transition:background .1s}
+  .modal-table tbody tr:hover{background:var(--table-row-hover)}
+  .modal-table tbody tr:hover td{color:var(--text)}
+  .modal-table .empty{padding:24px;text-align:center;color:var(--muted);font-style:italic}
+  .modal-letter-nav{display:flex;flex-wrap:wrap;gap:3px;padding:6px 0;
+    margin-bottom:10px;border-bottom:1px solid var(--border)}
+  .modal-letter-nav button{background:var(--chip-bg);color:var(--text-soft);
+    border:1px solid var(--border);font-size:10px;padding:3px 7px;border-radius:3px;
+    cursor:pointer;font-weight:700;letter-spacing:.5px;font-family:inherit;transition:all .12s}
+  .modal-letter-nav button:hover,
+  .modal-letter-nav button.active{background:var(--orange);color:#000;border-color:var(--orange)}
+  .modal-foot{padding:10px 20px;border-top:1px solid var(--border);
+    background:var(--bg-alt);font-size:11px;color:var(--muted);display:flex;
+    justify-content:space-between;align-items:center}
+
+  /* ===== Botões "Ver tudo" ao lado dos títulos ===== */
+  .panel h2 .btn-ver-tudo{margin-left:auto;background:transparent;
+    border:1px solid var(--border-strong);color:var(--muted);
+    font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .12s;font-family:inherit}
+  .panel h2 .btn-ver-tudo:hover{border-color:var(--orange);color:var(--orange);
+    background:rgba(220,38,38,.08)}
+  .panel h2{display:flex;align-items:center;gap:8px}
+
+  /* ===== Botão "lista alfabética" ===== */
+  .btn-list-clients{margin-top:6px;width:100%;padding:7px 9px;
+    background:transparent;border:1px dashed var(--border-strong);
+    color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;
+    border-radius:var(--radius-sm);transition:all .12s;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;gap:5px}
+  .btn-list-clients:hover{border-color:var(--orange);color:var(--orange);
+    border-style:solid;background:rgba(220,38,38,.05)}
+
+  /* ===== Toggle "Brasil sem export & intercompany" ===== */
+  .br-only-toggle{margin-top:8px;padding:9px 11px;
+    background:linear-gradient(135deg,rgba(0,200,83,.08) 0%,rgba(0,200,83,.04) 100%);
+    border:1px solid rgba(0,200,83,.3);border-left:3px solid var(--green);
+    border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;
+    display:flex;align-items:center;gap:9px;font-size:12px}
+  .br-only-toggle:hover{background:linear-gradient(135deg,rgba(0,200,83,.14) 0%,rgba(0,200,83,.06) 100%)}
+  .br-only-toggle.active{background:linear-gradient(135deg,rgba(0,200,83,.22) 0%,rgba(0,200,83,.1) 100%);
+    border-color:var(--green);box-shadow:0 0 0 1px rgba(0,200,83,.3)}
+  .br-only-toggle .br-icon{font-size:16px}
+  .br-only-toggle .br-label{flex:1;color:var(--text);font-weight:600;letter-spacing:.2px}
+  .br-only-toggle .br-status{font-size:10px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:.5px}
+  .br-only-toggle.active .br-status{color:var(--green)}
 </style>
 </head>
 <body>
@@ -441,6 +522,15 @@
       <label>Código do Cliente</label>
       <input type="text" id="f_cd" placeholder="Ex: 00123456">
       <div id="cd_match_info" class="cd-match"></div>
+      <button type="button" class="btn-list-clients" id="btn_open_clients_az">
+        <span>≡</span> Lista alfabética de clientes
+      </button>
+    </div>
+
+    <div class="br-only-toggle" id="br_only_toggle" title="Filtra apenas vendas no Brasil, excluindo exportações e empresas do grupo Fueltech">
+      <span class="br-icon">🇧🇷</span>
+      <span class="br-label">Brasil — sem export. e intercompany</span>
+      <span class="br-status" id="br_only_status">DESLIGADO</span>
     </div>
 
     <h3>Período</h3>
@@ -532,7 +622,9 @@
 
     <div class="row r3">
       <div class="panel">
-        <h2>Top 10 Clientes</h2>
+        <h2>Top 10 Clientes
+          <button type="button" class="btn-ver-tudo" id="btn_ver_clientes">Ver todos</button>
+        </h2>
         <div class="chart-wrap"><canvas id="chart_clients"></canvas></div>
       </div>
       <div class="panel">
@@ -633,18 +725,86 @@
 </div>
 </div>
 
+<!-- ===== Modal: Todos os Clientes (Top expandido) ===== -->
+<div class="modal-backdrop" id="modal_clients">
+  <div class="modal-box" role="dialog" aria-label="Lista de clientes">
+    <div class="modal-head">
+      <h3>Clientes <span class="badge" id="mc_badge">— recorte atual</span></h3>
+      <button type="button" class="modal-close" data-modal-close="modal_clients" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="modal-search" id="mc_search" placeholder="Buscar por nome, fantasia ou código…">
+      <table class="modal-table" id="mc_table">
+        <thead>
+          <tr>
+            <th data-k="cd">Código</th>
+            <th data-k="nome">Nome</th>
+            <th data-k="fant">Fantasia</th>
+            <th data-k="uf">UF</th>
+            <th data-k="cnt" class="num">Pedidos</th>
+            <th data-k="val" class="num">Faturamento</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <span id="mc_summary">—</span>
+      <span>Clique em um cliente para filtrar o dashboard</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Lista alfabética completa de clientes ===== -->
+<div class="modal-backdrop" id="modal_clients_az">
+  <div class="modal-box" role="dialog" aria-label="Lista alfabética de clientes">
+    <div class="modal-head">
+      <h3>Lista de Clientes <span class="badge" id="mca_count">—</span></h3>
+      <button type="button" class="modal-close" data-modal-close="modal_clients_az" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="modal-search" id="mca_search" placeholder="Buscar nome, fantasia ou código…">
+      <div class="modal-letter-nav" id="mca_letters"></div>
+      <table class="modal-table" id="mca_table">
+        <thead>
+          <tr>
+            <th data-k="cd">Código</th>
+            <th data-k="nome">Nome</th>
+            <th data-k="fant">Fantasia</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <span id="mca_summary">—</span>
+      <span>Clique em um cliente para aplicar o filtro</span>
+    </div>
+  </div>
+</div>
+
 <script src="dashboard_data.js"></script>
 <script src="dashboard_geo.js"></script>
 <script>
 const DATA = window.__DATA__;
 const GEO  = window.__GEO__;
 const C = Object.fromEntries(DATA.schema.map((s,i)=>[s,i]));
+// Códigos de cliente que representam empresas do grupo Fueltech (intercompany).
+// Vendas para esses códigos são excluídas quando state.brOnly está ativo.
+// Confirmados pelo usuário: subsidiárias internacionais.
+const INTERCOMPANY_CDS = new Set(['010790', '012736', '079909']);
+// 010790 FUELTECH USA LLC | 012736 FT ARGENTINA S.A | 079909 FUELTECH EUROPE B.V.
+
 const state = {
   nome:'', cd:'',
   // Quando o nome foi preenchido automaticamente a partir do código,
   // guardamos aqui para saber se podemos sobrescrever ou limpar sem
   // pisar em algo que o usuário tenha digitado manualmente.
   nomeAutoFromCd:'',
+  // Filtro "Brasil — sem export e intercompany". Quando true:
+  //   - exclui linhas com Estado='EX'
+  //   - exclui Cd_cliente em INTERCOMPANY_CDS
+  brOnly:false,
   // Range picker estilo GA4: rangeFrom/rangeTo = {y, m, d} ou null (sem filtro)
   rangeFrom:null, rangeTo:null,
   quickRange:'all',   // 'ytd'|'3m'|'6m'|'12m'|'all'|'custom'
@@ -770,6 +930,11 @@ function matchRow(r) {
   if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) return false;
   const cli = CLIENT_BY_IDX[r[C.cl]];
   if (state.excluirPadrao && cli && cli[1]==='CLIENTE PADRAO') return false;
+  // Filtro "Brasil sem export e intercompany"
+  if (state.brOnly) {
+    if (DATA.ufs[r[C.uf]] === 'EX') return false;
+    if (cli && INTERCOMPANY_CDS.has(cli[0])) return false;
+  }
   if (state.cd) { const cd=(cli&&cli[0])||''; if(!cd.includes(state.cd)) return false; }
   if (state.nome) {
     const n=state.nome.toLowerCase();
@@ -812,6 +977,11 @@ function matchRowComp(r, comp) {
   if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) return false;
   const cli = CLIENT_BY_IDX[r[C.cl]];
   if (state.excluirPadrao && cli && cli[1]==='CLIENTE PADRAO') return false;
+  // Filtro "Brasil sem export e intercompany"
+  if (state.brOnly) {
+    if (DATA.ufs[r[C.uf]] === 'EX') return false;
+    if (cli && INTERCOMPANY_CDS.has(cli[0])) return false;
+  }
   if (state.cd) { const cd=(cli&&cli[0])||''; if(!cd.includes(state.cd)) return false; }
   if (state.nome) {
     const n=state.nome.toLowerCase();
@@ -1944,6 +2114,192 @@ function renderAll() {
   },40);
 }
 
+// ===== MODAIS =====
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+const _mcSort = { k: 'val', dir: -1 };
+let _mcRowsCache = [];
+
+function openClientsModal() {
+  const rows = filtered();
+  const map = {};
+  for (const r of rows) {
+    const i = r[C.cl];
+    if (!map[i]) map[i] = { i, cli: CLIENT_BY_IDX[i] || ['','',''], val: 0, cnt: 0, ufs: new Set() };
+    map[i].val += r[C.val];
+    if (r[C.tr] !== 1) map[i].cnt++;
+    const uf = DATA.ufs[r[C.uf]];
+    if (uf) map[i].ufs.add(uf);
+  }
+  _mcRowsCache = Object.values(map);
+  document.getElementById('mc_search').value = '';
+  document.getElementById('mc_badge').textContent = '\u00b7 ' + _mcRowsCache.length + ' cliente(s) no recorte';
+  renderClientsModal();
+  openModal('modal_clients');
+}
+
+function renderClientsModal() {
+  const q = (document.getElementById('mc_search').value || '').toLowerCase().trim();
+  let arr = _mcRowsCache;
+  if (q) {
+    arr = arr.filter(function(x) {
+      const c = x.cli;
+      return (c[0]||'').toLowerCase().indexOf(q) >= 0 ||
+             (c[1]||'').toLowerCase().indexOf(q) >= 0 ||
+             (c[2]||'').toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  const k = _mcSort.k, dir = _mcSort.dir;
+  arr = arr.slice().sort(function(a,b) {
+    let av, bv;
+    if (k === 'cd')   { av = a.cli[0]||''; bv = b.cli[0]||''; }
+    else if (k === 'nome') { av = a.cli[1]||''; bv = b.cli[1]||''; }
+    else if (k === 'fant') { av = a.cli[2]||''; bv = b.cli[2]||''; }
+    else if (k === 'uf')   { av = Array.from(a.ufs).join(','); bv = Array.from(b.ufs).join(','); }
+    else if (k === 'cnt')  { av = a.cnt; bv = b.cnt; }
+    else { av = a.val; bv = b.val; }
+    if (typeof av === 'string') return dir * av.localeCompare(bv);
+    return dir * (av - bv);
+  });
+  const tbody = document.querySelector('#mc_table tbody');
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum cliente neste recorte.</td></tr>';
+  } else {
+    tbody.innerHTML = arr.map(function(x) {
+      const c = x.cli;
+      return '<tr data-cd="' + escHtml(c[0]||'') + '" data-nome="' + escHtml(c[1]||'') + '">'
+        + '<td>' + escHtml(c[0]||'') + '</td>'
+        + '<td>' + escHtml(c[1]||'-') + '</td>'
+        + '<td>' + escHtml(c[2]||'') + '</td>'
+        + '<td>' + escHtml(Array.from(x.ufs).sort().join(', ')) + '</td>'
+        + '<td class="num">' + fmtInt(x.cnt) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+        + '</tr>';
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+      tr.onclick = function() {
+        applyClientFilter(tr.dataset.cd, tr.dataset.nome);
+        closeModal('modal_clients');
+      };
+    });
+  }
+  document.querySelectorAll('#mc_table th').forEach(function(th) {
+    th.classList.toggle('sorted', th.dataset.k === k);
+    th.dataset.arrow = th.dataset.k === k ? (dir === -1 ? '\u25bc' : '\u25b2') : '';
+  });
+  document.getElementById('mc_summary').textContent = arr.length + ' de ' + _mcRowsCache.length + ' clientes';
+}
+
+let _mcaCache = null;
+let _mcaActiveLetter = null;
+
+function buildClientsAZCache() {
+  const arr = [];
+  for (let i = 0; i < CLIENT_BY_IDX.length; i++) {
+    const c = CLIENT_BY_IDX[i];
+    if (!c) continue;
+    const nome = (c[1]||'').trim();
+    const letter = nome ? nome.charAt(0).toUpperCase() : '#';
+    arr.push({ idx: i, cd: c[0]||'', nome: nome, fant: c[2]||'', letter: /[A-Z]/.test(letter) ? letter : '#' });
+  }
+  arr.sort(function(a,b) { return (a.nome||'').localeCompare(b.nome||'') || (a.cd||'').localeCompare(b.cd||''); });
+  return arr;
+}
+
+function openClientsAZModal() {
+  if (!_mcaCache) _mcaCache = buildClientsAZCache();
+  document.getElementById('mca_count').textContent = '\u00b7 ' + fmtInt(_mcaCache.length) + ' clientes cadastrados';
+  document.getElementById('mca_search').value = '';
+  _mcaActiveLetter = null;
+  const letterSet = {};
+  for (let i = 0; i < _mcaCache.length; i++) letterSet[_mcaCache[i].letter] = true;
+  const letters = Object.keys(letterSet).sort();
+  const nav = document.getElementById('mca_letters');
+  nav.innerHTML = '<button data-l="">TODOS</button>' +
+    letters.map(function(l) { return '<button data-l="' + l + '">' + l + '</button>'; }).join('');
+  nav.querySelectorAll('button').forEach(function(b) {
+    b.onclick = function() {
+      _mcaActiveLetter = b.dataset.l || null;
+      nav.querySelectorAll('button').forEach(function(x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      renderClientsAZ();
+    };
+  });
+  nav.querySelector('button[data-l=""]').classList.add('active');
+  renderClientsAZ();
+  openModal('modal_clients_az');
+}
+
+function renderClientsAZ() {
+  const q = (document.getElementById('mca_search').value || '').toLowerCase().trim();
+  let arr = _mcaCache;
+  if (_mcaActiveLetter) arr = arr.filter(function(x) { return x.letter === _mcaActiveLetter; });
+  if (q) {
+    arr = arr.filter(function(x) {
+      return x.cd.toLowerCase().indexOf(q) >= 0 ||
+             x.nome.toLowerCase().indexOf(q) >= 0 ||
+             x.fant.toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  const truncated = arr.length > 500;
+  const view = truncated ? arr.slice(0, 500) : arr;
+  const tbody = document.querySelector('#mca_table tbody');
+  if (!view.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum cliente encontrado.</td></tr>';
+  } else {
+    tbody.innerHTML = view.map(function(x) {
+      return '<tr data-cd="' + escHtml(x.cd) + '" data-nome="' + escHtml(x.nome) + '">'
+        + '<td>' + escHtml(x.cd) + '</td>'
+        + '<td>' + escHtml(x.nome||'-') + '</td>'
+        + '<td>' + escHtml(x.fant) + '</td>'
+        + '</tr>';
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+      tr.onclick = function() {
+        applyClientFilter(tr.dataset.cd, tr.dataset.nome);
+        closeModal('modal_clients_az');
+      };
+    });
+  }
+  document.getElementById('mca_summary').textContent =
+    truncated ? 'Mostrando primeiros 500 de ' + fmtInt(arr.length) + ' resultados - refine a busca'
+              : fmtInt(arr.length) + ' cliente(s)';
+}
+
+function applyClientFilter(cd, nome) {
+  state.cd = cd || '';
+  state.nome = nome || '';
+  state.nomeAutoFromCd = '';
+  document.getElementById('f_cd').value = state.cd;
+  document.getElementById('f_nome').value = state.nome;
+  syncCdMatch();
+  renderAll();
+}
+
+function applyBrOnlyToggle() {
+  const el = document.getElementById('br_only_toggle');
+  const status = document.getElementById('br_only_status');
+  if (!el || !status) return;
+  if (state.brOnly) {
+    el.classList.add('active');
+    status.textContent = 'LIGADO';
+  } else {
+    el.classList.remove('active');
+    status.textContent = 'DESLIGADO';
+  }
+}
+
 // ===== INIT =====
 function init() {
   // Exibe o app ANTES de criar os charts — Chart.js precisa medir o
@@ -1974,6 +2330,51 @@ function init() {
   document.getElementById('f_vd').onchange=e=>{state.vendedor=e.target.value; renderAll();};
   document.getElementById('f_excl_padrao').onchange=e=>{state.excluirPadrao=e.target.checked; renderAll();};
   document.getElementById('f_incl_dev').onchange=e=>{state.incluirDev=e.target.checked; renderAll();};
+
+  // Toggle "Brasil sem export e intercompany"
+  const brT = document.getElementById('br_only_toggle');
+  if (brT) {
+    brT.onclick = function() {
+      state.brOnly = !state.brOnly;
+      applyBrOnlyToggle();
+      renderAll();
+    };
+  }
+
+  // Botoes dos modais
+  const btnVerCli = document.getElementById('btn_ver_clientes');
+  if (btnVerCli) btnVerCli.onclick = openClientsModal;
+  const btnAZ = document.getElementById('btn_open_clients_az');
+  if (btnAZ) btnAZ.onclick = openClientsAZModal;
+
+  // Sort/search nos modais
+  const mcSearch = document.getElementById('mc_search');
+  if (mcSearch) mcSearch.oninput = renderClientsModal;
+  document.querySelectorAll('#mc_table th').forEach(function(th) {
+    th.onclick = function() {
+      const k = th.dataset.k;
+      if (_mcSort.k === k) _mcSort.dir *= -1;
+      else { _mcSort.k = k; _mcSort.dir = (k === 'cd' || k === 'nome' || k === 'fant' || k === 'uf') ? 1 : -1; }
+      renderClientsModal();
+    };
+  });
+  const mcaSearch = document.getElementById('mca_search');
+  if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
+
+  // Fechar modais
+  document.querySelectorAll('[data-modal-close]').forEach(function(b) {
+    b.onclick = function() { closeModal(b.dataset.modalClose); };
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(function(bd) {
+    bd.addEventListener('click', function(e) {
+      if (e.target === bd) closeModal(bd.id);
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop.open').forEach(function(m) { closeModal(m.id); });
+    }
+  });
 
   // ===== Calendário =====
   document.getElementById('range_trigger').onclick = toggleCalendar;
@@ -2016,7 +2417,8 @@ function init() {
     state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
     state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
     state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
-    state.compareYoY=false;
+    state.compareYoY=false; state.brOnly=false;
+    applyBrOnlyToggle();
     applyQuickRange('12m');
     document.getElementById('f_nome').value=''; document.getElementById('f_cd').value='';
     document.getElementById('f_excl_padrao').checked=false;
@@ -2058,6 +2460,8 @@ function init() {
 
   // Inicializa o auto-match Cd -> Nome com o estado atual
   syncCdMatch();
+  // Sincroniza UI do toggle Brasil-only
+  applyBrOnlyToggle();
 
   // Theme toggle
   const root = document.documentElement;

@@ -410,6 +410,10 @@
   }
   @keyframes ldslide { 0%{margin-left:-40%} 100%{margin-left:100%} }
 
+    /* Toggle "Por UF / Por Região" no mapa */
+  .map-agg-toggle{margin-left:6px}
+  .map-agg-toggle button{font-size:10px;padding:4px 9px}
+
   /* ===== Modal genérico ===== */
   .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
     z-index:500;backdrop-filter:blur(2px)}
@@ -603,6 +607,11 @@
           <div class="metric-toggle" id="map_metric">
             <button class="active" data-m="val">Faturamento</button>
             <button data-m="cnt">Pedidos</button>
+            <button data-m="ticket">Ticket Médio</button>
+          </div>
+          <div class="metric-toggle map-agg-toggle" id="map_agg" title="Granularidade do mapa">
+            <button class="active" data-a="uf">Por UF</button>
+            <button data-a="regiao">Por Região</button>
           </div>
         </h2>
         <div class="map-wrap">
@@ -818,7 +827,7 @@ const state = {
   tabelas:new Set(), produtos:new Set(),
   vendedor:'',
   excluirPadrao:false, incluirDev:true,
-  mapMetric:'val', tableLimit:500,
+  mapMetric:'val', mapAgg:'uf', tableLimit:500,
   tableSort:{k:'data',dir:-1},
   compareYoY:false,
 };
@@ -827,6 +836,23 @@ const DATA_RANGE = { minY:null, minM:null, minD:null, maxY:null, maxM:null, maxD
 // Helper: retorna a data da linha como YYYYMMDD numérico.
 function rowYMD(r) { const v = r[C.data]; return typeof v === 'number' ? v : +v; }
 function ymdNum(ymd) { return ymd ? (ymd.y*10000 + ymd.m*100 + ymd.d) : 0; }
+// Mapeamento UF -> Região (para agregação no mapa).
+const UF_REGIAO = {
+  AC:'Norte', AM:'Norte', AP:'Norte', PA:'Norte', RO:'Norte', RR:'Norte', TO:'Norte',
+  AL:'Nordeste', BA:'Nordeste', CE:'Nordeste', MA:'Nordeste', PB:'Nordeste',
+  PE:'Nordeste', PI:'Nordeste', RN:'Nordeste', SE:'Nordeste',
+  DF:'Centro-Oeste', GO:'Centro-Oeste', MS:'Centro-Oeste', MT:'Centro-Oeste',
+  ES:'Sudeste', MG:'Sudeste', RJ:'Sudeste', SP:'Sudeste',
+  PR:'Sul', RS:'Sul', SC:'Sul'
+};
+const REGIAO_UFS = {
+  'Norte':['AC','AM','AP','PA','RO','RR','TO'],
+  'Nordeste':['AL','BA','CE','MA','PB','PE','PI','RN','SE'],
+  'Centro-Oeste':['DF','GO','MS','MT'],
+  'Sudeste':['ES','MG','RJ','SP'],
+  'Sul':['PR','RS','SC']
+};
+
 const CLIENT_BY_IDX = DATA.clients;
 
 const fmtMoney = v => { const s = Math.sign(v||0)<0?'-':''; const av=Math.abs(v||0);
@@ -1183,10 +1209,41 @@ function buildMap() {
 }
 let lastMapInfo={};
 function renderMap(agg) {
-  lastMapInfo=agg.porUf;
-  const metric=state.mapMetric;
-  let max=0;
-  for(const uf in agg.porUf) if(agg.porUf[uf][metric]>max) max=agg.porUf[uf][metric];
+  // Calcula ticket médio por UF antes de tudo
+  for (const uf in agg.porUf) {
+    const u = agg.porUf[uf];
+    u.ticket = u.cnt > 0 ? (u.val / u.cnt) : 0;
+  }
+  lastMapInfo = agg.porUf;
+  const metric = state.mapMetric;
+  const aggMode = state.mapAgg || 'uf';
+
+  // Quando "Por Região", soma val/cnt das UFs do bloco e recalcula ticket.
+  // Cada UF do bloco recebe a MESMA cor (do total da região).
+  let regionData = {};
+  if (aggMode === 'regiao') {
+    for (const reg in REGIAO_UFS) {
+      regionData[reg] = { cnt:0, val:0, fat:0, clients:{} };
+      for (const uf of REGIAO_UFS[reg]) {
+        const u = agg.porUf[uf];
+        if (!u) continue;
+        regionData[reg].cnt += u.cnt;
+        regionData[reg].val += u.val;
+        regionData[reg].fat += u.fat;
+        Object.assign(regionData[reg].clients, u.clients);
+      }
+      regionData[reg].ticket = regionData[reg].cnt > 0
+        ? (regionData[reg].val / regionData[reg].cnt) : 0;
+    }
+  }
+
+  // Encontra max conforme modo
+  let max = 0;
+  if (aggMode === 'regiao') {
+    for (const reg in regionData) if (regionData[reg][metric] > max) max = regionData[reg][metric];
+  } else {
+    for (const uf in agg.porUf) if (agg.porUf[uf][metric] > max) max = agg.porUf[uf][metric];
+  }
   const isLight=document.documentElement.getAttribute('data-theme')==='light';
   // Paleta multi-stop com tons graduados de vermelho — distingue melhor estados
   // pequenos quando os top (SP/MG) dominam o total. Curva sqrt realça valores baixos.
@@ -1223,14 +1280,28 @@ function renderMap(agg) {
     }
     return stops[stops.length-1].c;
   }
-  for(const uf in mapPaths){
-    const info=agg.porUf[uf], v=info?info[metric]:0, t=max?v/max:0;
+  for (const uf in mapPaths) {
+    let v;
+    if (aggMode === 'regiao') {
+      const reg = UF_REGIAO[uf];
+      const rd = reg ? regionData[reg] : null;
+      v = rd ? rd[metric] : 0;
+    } else {
+      const info = agg.porUf[uf];
+      v = info ? info[metric] : 0;
+    }
+    const t = max ? v / max : 0;
     const c = heatColor(t);
-    mapPaths[uf].setAttribute('fill',`rgb(${c[0]},${c[1]},${c[2]})`);
-    mapPaths[uf].classList.toggle('selected',state.ufs.has(uf));
+    mapPaths[uf].setAttribute('fill', `rgb(${c[0]},${c[1]},${c[2]})`);
+    mapPaths[uf].classList.toggle('selected', state.ufs.has(uf));
   }
-  document.getElementById('legend_min').textContent=metric==='val'?'R$ 0':'0';
-  document.getElementById('legend_max').textContent=metric==='val'?fmtMoneyShort(max):fmtInt(max);
+  // Legenda: formato depende da métrica
+  function fmtMetric(v) {
+    if (metric === 'val' || metric === 'ticket') return fmtMoneyShort(v);
+    return fmtInt(v);
+  }
+  document.getElementById('legend_min').textContent = fmtMetric(0);
+  document.getElementById('legend_max').textContent = fmtMetric(max);
   if(agg.exCount>0){
     document.getElementById('ex_panel').style.display='block';
     document.getElementById('ex_badge').textContent=fmtInt(agg.exCount)+' pedidos';
@@ -2469,6 +2540,10 @@ function init() {
   document.querySelectorAll('#map_metric button').forEach(b=>{
     b.onclick=()=>{document.querySelectorAll('#map_metric button').forEach(x=>x.classList.remove('active'));
       b.classList.add('active'); state.mapMetric=b.dataset.m; renderAll();};
+  });
+  document.querySelectorAll('#map_agg button').forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll('#map_agg button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); state.mapAgg=b.dataset.a; renderAll();};
   });
   document.querySelectorAll('#metric_scope button').forEach(b=>{
     b.onclick=()=>{document.querySelectorAll('#metric_scope button').forEach(x=>x.classList.remove('active'));

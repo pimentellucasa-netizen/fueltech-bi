@@ -1623,33 +1623,67 @@ function vendFilterLabel() {
   return parts.length ? ' — '+parts.join(' · ') : ' — (todos os filtros)';
 }
 function renderVendUfs(agg) {
-  const entries=Object.entries(agg.porUf).sort((a,b)=>b[1].val-a[1].val);
-  // Top 10 ganham nome completo "SC — Santa Catarina"; demais ficam só com sigla.
-  const labels=entries.map((e,i) => {
+  // Filtra estados com val=0 (resíduo de filtros de produto/vendedor que zeram UFs).
+  const entries = Object.entries(agg.porUf)
+    .filter(e => e[1] && (e[1].val > 0 || e[1].cnt > 0))
+    .sort((a,b) => b[1].val - a[1].val);
+
+  // Top 10 ganham nome completo; demais ficam só com sigla para o eixo Y caber.
+  const labels = entries.map((e,i) => {
     const uf = e[0];
     const nome = UF_NOME[uf];
     if (i < 10 && nome) return uf + ' — ' + nome;
     return uf;
   });
-  const ufs=entries.map(e=>e[0]);
-  const data=entries.map(e=>e[1].val);
-  const cnts=entries.map(e=>e[1].cnt);
-  document.getElementById('vend_uf_summary').textContent=
-    vendFilterLabel()+` · ${labels.length} estado(s)`;
-  const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:'#DC2626',borderRadius:3}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{
-          title: c => {
-            const uf = ufs[c[0].dataIndex];
-            return UF_NOME[uf] ? (uf + ' — ' + UF_NOME[uf]) : uf;
-          },
-          label: c => fmtMoney(c.parsed.x)+' · '+fmtInt(cnts[c.dataIndex])+' pedidos'
-        }}},
-      scales:{x:{ticks:{callback:v=>fmtMoneyShort(v),font:{size:9}},grid:{color:gridColor()}},
-        y:{grid:{display:false},ticks:{font:{size:10}}}}}};
-  if(charts.vendUfs){charts.vendUfs.data=cfg.data;charts.vendUfs.update();}
-  else charts.vendUfs=new Chart(document.getElementById('chart_vend_ufs'),cfg);
+  const ufs = entries.map(e => e[0]);
+  const data = entries.map(e => e[1].val);
+  const cnts = entries.map(e => e[1].cnt);
+  document.getElementById('vend_uf_summary').textContent =
+    vendFilterLabel() + ' · ' + labels.length + ' estado(s)';
+
+  // Ajusta altura do canvas conforme número de estados — garante todos os labels
+  // caibam (autoSkip:false não adianta se o canvas é muito pequeno).
+  const wrap = document.getElementById('chart_vend_ufs').parentElement;
+  if (wrap) {
+    const minH = Math.max(280, entries.length * 22);
+    wrap.style.height = minH + 'px';
+  }
+
+  const cfg = {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: '#DC2626', borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: c => {
+              const uf = ufs[c[0].dataIndex];
+              return UF_NOME[uf] ? (uf + ' — ' + UF_NOME[uf]) : uf;
+            },
+            label: c => fmtMoney(c.parsed.x) + ' · ' + fmtInt(cnts[c.dataIndex]) + ' pedidos'
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { callback: v => fmtMoneyShort(v), font: { size: 9 } },
+          grid: { color: gridColor() }
+        },
+        y: {
+          grid: { display: false },
+          // autoSkip:false garante que TODOS os 27 estados apareçam como label.
+          // maxRotation 0 + minRotation 0 mantém horizontal.
+          ticks: { font: { size: 10 }, autoSkip: false, maxRotation: 0, minRotation: 0 }
+        }
+      }
+    }
+  };
+  if (charts.vendUfs) { charts.vendUfs.destroy(); charts.vendUfs = null; }
+  charts.vendUfs = new Chart(document.getElementById('chart_vend_ufs'), cfg);
 }
 function renderVendTabelas(agg) {
   const entries=Object.entries(agg.porTabela).sort((a,b)=>b[1].val-a[1].val);

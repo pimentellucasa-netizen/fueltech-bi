@@ -859,6 +859,18 @@ const DATA_RANGE = { minY:null, minM:null, minD:null, maxY:null, maxM:null, maxD
 // Helper: retorna a data da linha como YYYYMMDD numérico.
 function rowYMD(r) { const v = r[C.data]; return typeof v === 'number' ? v : +v; }
 function ymdNum(ymd) { return ymd ? (ymd.y*10000 + ymd.m*100 + ymd.d) : 0; }
+// Mapeamento UF -> Nome completo do estado.
+const UF_NOME = {
+  AC:'Acre', AL:'Alagoas', AM:'Amazonas', AP:'Amapá',
+  BA:'Bahia', CE:'Ceará', DF:'Distrito Federal', ES:'Espírito Santo',
+  GO:'Goiás', MA:'Maranhão', MG:'Minas Gerais', MS:'Mato Grosso do Sul',
+  MT:'Mato Grosso', PA:'Pará', PB:'Paraíba', PE:'Pernambuco',
+  PI:'Piauí', PR:'Paraná', RJ:'Rio de Janeiro', RN:'Rio Grande do Norte',
+  RO:'Rondônia', RR:'Roraima', RS:'Rio Grande do Sul', SC:'Santa Catarina',
+  SE:'Sergipe', SP:'São Paulo', TO:'Tocantins',
+  EX:'Exportação'
+};
+
 // Mapeamento UF -> Região (para agregação no mapa).
 const UF_REGIAO = {
   AC:'Norte', AM:'Norte', AP:'Norte', PA:'Norte', RO:'Norte', RR:'Norte', TO:'Norte',
@@ -1612,7 +1624,14 @@ function vendFilterLabel() {
 }
 function renderVendUfs(agg) {
   const entries=Object.entries(agg.porUf).sort((a,b)=>b[1].val-a[1].val);
-  const labels=entries.map(e=>e[0]);
+  // Top 10 ganham nome completo "SC — Santa Catarina"; demais ficam só com sigla.
+  const labels=entries.map((e,i) => {
+    const uf = e[0];
+    const nome = UF_NOME[uf];
+    if (i < 10 && nome) return uf + ' — ' + nome;
+    return uf;
+  });
+  const ufs=entries.map(e=>e[0]);
   const data=entries.map(e=>e[1].val);
   const cnts=entries.map(e=>e[1].cnt);
   document.getElementById('vend_uf_summary').textContent=
@@ -1620,7 +1639,13 @@ function renderVendUfs(agg) {
   const cfg={type:'bar',data:{labels,datasets:[{data,backgroundColor:'#DC2626',borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:c=>fmtMoney(c.parsed.x)+' · '+fmtInt(cnts[c.dataIndex])+' pedidos'}}},
+        tooltip:{callbacks:{
+          title: c => {
+            const uf = ufs[c[0].dataIndex];
+            return UF_NOME[uf] ? (uf + ' — ' + UF_NOME[uf]) : uf;
+          },
+          label: c => fmtMoney(c.parsed.x)+' · '+fmtInt(cnts[c.dataIndex])+' pedidos'
+        }}},
       scales:{x:{ticks:{callback:v=>fmtMoneyShort(v),font:{size:9}},grid:{color:gridColor()}},
         y:{grid:{display:false},ticks:{font:{size:10}}}}}};
   if(charts.vendUfs){charts.vendUfs.data=cfg.data;charts.vendUfs.update();}

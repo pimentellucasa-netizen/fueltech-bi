@@ -474,20 +474,25 @@
   .btn-list-clients:hover{border-color:var(--orange);color:var(--orange);
     border-style:solid;background:rgba(220,38,38,.05)}
 
-  /* ===== Toggle "Brasil sem export & intercompany" ===== */
-  .br-only-toggle{margin-top:8px;padding:9px 11px;
-    background:linear-gradient(135deg,rgba(0,200,83,.08) 0%,rgba(0,200,83,.04) 100%);
-    border:1px solid rgba(0,200,83,.3);border-left:3px solid var(--green);
-    border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;
-    display:flex;align-items:center;gap:9px;font-size:12px}
-  .br-only-toggle:hover{background:linear-gradient(135deg,rgba(0,200,83,.14) 0%,rgba(0,200,83,.06) 100%)}
-  .br-only-toggle.active{background:linear-gradient(135deg,rgba(0,200,83,.22) 0%,rgba(0,200,83,.1) 100%);
-    border-color:var(--green);box-shadow:0 0 0 1px rgba(0,200,83,.3)}
-  .br-only-toggle .br-icon{font-size:16px}
-  .br-only-toggle .br-label{flex:1;color:var(--text);font-weight:600;letter-spacing:.2px}
-  .br-only-toggle .br-status{font-size:10px;color:var(--muted);font-weight:700;
-    text-transform:uppercase;letter-spacing:.5px}
-  .br-only-toggle.active .br-status{color:var(--green)}
+  /* ===== Toggle "Brasil sem export & intercompany" — versão mini no header ===== */
+  .br-only-toggle-mini{margin-left:12px;padding:6px 12px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:18px;cursor:pointer;transition:all .15s;
+    display:flex;align-items:center;gap:7px;font-size:11px;font-family:inherit;
+    color:#bbb;font-weight:600;letter-spacing:.2px;white-space:nowrap}
+  .br-only-toggle-mini:hover{background:rgba(0,200,83,.14);
+    border-color:rgba(0,200,83,.5);color:#fff}
+  .br-only-toggle-mini.active{background:linear-gradient(135deg,rgba(0,200,83,.25) 0%,rgba(0,200,83,.12) 100%);
+    border-color:var(--green);color:#fff;
+    box-shadow:0 0 0 1px rgba(0,200,83,.25),0 2px 8px rgba(0,200,83,.15)}
+  .br-only-toggle-mini .br-icon{font-size:14px;line-height:1}
+  .br-only-toggle-mini .br-label{font-weight:600}
+  .br-only-toggle-mini .br-status{font-size:9px;font-weight:800;
+    text-transform:uppercase;letter-spacing:.6px;
+    padding:2px 7px;border-radius:8px;
+    background:rgba(255,255,255,.1);color:#999}
+  .br-only-toggle-mini.active .br-status{background:var(--green);color:#000}
 </style>
 </head>
 <body>
@@ -505,6 +510,11 @@
     <button class="active" data-s="liq">Líquido (vendas − devoluções)</button>
     <button data-s="bru">Bruto (só vendas)</button>
   </div>
+  <button type="button" class="br-only-toggle-mini" id="br_only_toggle" title="Filtra apenas vendas no Brasil, excluindo exportações e empresas do grupo Fueltech">
+    <span class="br-icon">🇧🇷</span>
+    <span class="br-label">Brasil sem export./intercompany</span>
+    <span class="br-status" id="br_only_status">OFF</span>
+  </button>
   <span class="sub">2023 · 2024 · 2025 · 2026</span>
   <button id="theme_toggle" class="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema">
     <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -525,12 +535,6 @@
       <button type="button" class="btn-list-clients" id="btn_open_clients_az">
         <span>≡</span> Lista alfabética de clientes
       </button>
-    </div>
-
-    <div class="br-only-toggle" id="br_only_toggle" title="Filtra apenas vendas no Brasil, excluindo exportações e empresas do grupo Fueltech">
-      <span class="br-icon">🇧🇷</span>
-      <span class="br-label">Brasil — sem export. e intercompany</span>
-      <span class="br-status" id="br_only_status">DESLIGADO</span>
     </div>
 
     <h3>Período</h3>
@@ -2293,10 +2297,10 @@ function applyBrOnlyToggle() {
   if (!el || !status) return;
   if (state.brOnly) {
     el.classList.add('active');
-    status.textContent = 'LIGADO';
+    status.textContent = 'ON';
   } else {
     el.classList.remove('active');
-    status.textContent = 'DESLIGADO';
+    status.textContent = 'OFF';
   }
 }
 

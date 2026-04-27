@@ -353,7 +353,9 @@
     box-shadow:0 2px 6px rgba(220,38,38,.3)}
   .map-legend{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--muted);margin-top:10px}
   .map-legend .gradient{flex:1;height:10px;
-    background:linear-gradient(to right,var(--map-low),var(--map-mid),var(--orange));
+    background:linear-gradient(to right,#1a1a1a 0%,#3c0c0c 10%,#7f1d1d 25%,#b91c1c 45%,#dc2626 65%,#ef4444 85%,#fb923c 100%);}
+  :root[data-theme="light"] .legend-bar{
+    background:linear-gradient(to right,#f0f0f3 0%,#fee2e2 10%,#fca5a5 25%,#f87171 45%,#ef4444 65%,#dc2626 85%,#991b1b 100%);
     border-radius:5px;border:1px solid var(--border)}
   table.detail{width:100%;border-collapse:collapse;font-size:11px}
   table.detail thead{position:sticky;top:0;z-index:2}
@@ -1186,14 +1188,45 @@ function renderMap(agg) {
   let max=0;
   for(const uf in agg.porUf) if(agg.porUf[uf][metric]>max) max=agg.porUf[uf][metric];
   const isLight=document.documentElement.getAttribute('data-theme')==='light';
-  const b0 = isLight ? [240,240,243] : [26,26,26];
-  const b1 = [220,38,38];
+  // Paleta multi-stop com tons graduados de vermelho — distingue melhor estados
+  // pequenos quando os top (SP/MG) dominam o total. Curva sqrt realça valores baixos.
+  const STOPS_DARK = [
+    {at:0.00, c:[26,26,26]},     // fundo escuro
+    {at:0.10, c:[60,12,12]},     // vinho profundo
+    {at:0.25, c:[127,29,29]},    // vermelho-vinho
+    {at:0.45, c:[185,28,28]},    // vermelho médio
+    {at:0.65, c:[220,38,38]},    // vermelho Fueltech
+    {at:0.85, c:[239,68,68]},    // vermelho vivo
+    {at:1.00, c:[251,146,60]}    // laranja-vermelho (pico)
+  ];
+  const STOPS_LIGHT = [
+    {at:0.00, c:[240,240,243]},  // fundo claro
+    {at:0.10, c:[254,226,226]},  // rosa pálido
+    {at:0.25, c:[252,165,165]},  // rosa
+    {at:0.45, c:[248,113,113]},  // rosa-vermelho
+    {at:0.65, c:[239,68,68]},    // vermelho médio
+    {at:0.85, c:[220,38,38]},    // vermelho profundo
+    {at:1.00, c:[153,27,27]}     // bordô
+  ];
+  const stops = isLight ? STOPS_LIGHT : STOPS_DARK;
+  function heatColor(t) {
+    // Curva sqrt: realça os baixos — estado com 1% do max vira ~10% do gradiente
+    t = Math.sqrt(Math.max(0, Math.min(1, t)));
+    for (let i=1; i<stops.length; i++) {
+      if (t <= stops[i].at) {
+        const a = stops[i-1], b = stops[i];
+        const k = (t - a.at) / (b.at - a.at || 1);
+        return [Math.round(a.c[0]+(b.c[0]-a.c[0])*k),
+                Math.round(a.c[1]+(b.c[1]-a.c[1])*k),
+                Math.round(a.c[2]+(b.c[2]-a.c[2])*k)];
+      }
+    }
+    return stops[stops.length-1].c;
+  }
   for(const uf in mapPaths){
     const info=agg.porUf[uf], v=info?info[metric]:0, t=max?v/max:0;
-    const r=Math.round(b0[0]+(b1[0]-b0[0])*t),
-          g=Math.round(b0[1]+(b1[1]-b0[1])*t),
-          b=Math.round(b0[2]+(b1[2]-b0[2])*t);
-    mapPaths[uf].setAttribute('fill',`rgb(${r},${g},${b})`);
+    const c = heatColor(t);
+    mapPaths[uf].setAttribute('fill',`rgb(${c[0]},${c[1]},${c[2]})`);
     mapPaths[uf].classList.toggle('selected',state.ufs.has(uf));
   }
   document.getElementById('legend_min').textContent=metric==='val'?'R$ 0':'0';

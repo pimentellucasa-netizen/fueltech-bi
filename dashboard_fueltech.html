@@ -775,17 +775,10 @@
       </div>
     </div>
 
-    <div class="row r2">
+    <div class="row">
       <div class="panel">
         <h2>Desempenho por Vendedor</h2>
-        <div class="chart-wrap"><canvas id="chart_vends"></canvas></div>
-      </div>
-      <div class="panel">
-        <h2>
-          Auditoria de Devoluções
-          <span id="dev_summary" style="font-size:11px;color:var(--muted);font-weight:400"></span>
-        </h2>
-        <div class="chart-wrap"><canvas id="chart_devs"></canvas></div>
+        <div class="chart-wrap" style="height:340px"><canvas id="chart_vends"></canvas></div>
       </div>
     </div>
 
@@ -2601,7 +2594,7 @@ function renderAll() {
     renderClientDiagnosis(rows);
     renderKPIs(agg, aggComp); renderMap(agg);
     renderTimeline(agg, aggComp); renderTopClients(agg); renderTopProdutos(agg);
-    renderTabelas(agg); renderVends(agg); renderDevs(agg);
+    renderTabelas(agg); renderVends(agg);
     renderVendUfs(agg); renderVendTabelas(agg);
     renderTable(rows);
     updateExportTabBadge();
@@ -3416,4 +3409,4 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       

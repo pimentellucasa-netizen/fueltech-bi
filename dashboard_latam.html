@@ -137,6 +137,22 @@
     background:linear-gradient(to right,#1a1a1a 0%,#3c0c0c 10%,#7f1d1d 25%,
       #b91c1c 45%,#dc2626 65%,#ef4444 85%,#fb923c 100%)}
 
+  /* Tooltip identidade Brasil */
+  .map-wrap{position:relative}
+  .tooltip{position:absolute; background:#000; border:1px solid var(--orange);
+    color:#fff; padding:10px 12px; font-size:11px; border-radius:var(--radius-sm);
+    pointer-events:none; opacity:0; transition:opacity .15s; z-index:10;
+    min-width:200px; max-width:280px;
+    box-shadow:0 4px 16px rgba(0,0,0,.45)}
+  .tooltip h4{margin:0 0 5px; color:var(--orange); font-size:12px; font-weight:700}
+  .tooltip .line{display:flex; justify-content:space-between; gap:12px; padding:1px 0}
+  .tooltip .line span:last-child{font-weight:600}
+  .tooltip hr{border:none; border-top:1px solid #333; margin:6px 0}
+  .tooltip .top-label{color:#aaa; font-size:10px; margin-bottom:3px;
+    text-transform:uppercase; letter-spacing:.5px; font-weight:700}
+  .tooltip .empty-note{color:#aaa; font-size:10px; font-style:italic;
+    margin-top:4px; line-height:1.3}
+
   /* Tabela */
   table{width:100%; border-collapse:collapse; font-size:12px}
   th{padding:8px 10px; text-align:left; font-weight:700;
@@ -257,12 +273,15 @@
           <span>Mapa — América Latina</span>
           <span class="info" id="map_info"></span>
         </h2>
-        <svg class="latam-map" id="latam_map" viewBox="0 0 400 600"
-             preserveAspectRatio="xMidYMid meet"
-             xmlns="http://www.w3.org/2000/svg">
-          <g id="latam_paths"></g>
-          <g id="latam_labels"></g>
-        </svg>
+        <div class="map-wrap">
+          <svg class="latam-map" id="latam_map" viewBox="0 0 400 600"
+               preserveAspectRatio="xMidYMid meet"
+               xmlns="http://www.w3.org/2000/svg">
+            <g id="latam_paths"></g>
+            <g id="latam_labels"></g>
+          </svg>
+          <div class="tooltip" id="map_tooltip"></div>
+        </div>
         <div class="legend">
           <span>R$ 0</span>
           <div class="legend-bar"></div>
@@ -498,11 +517,17 @@ function aggregate() {
     const dt = +r[C.data];
     if (dt < fromN || dt > toN) continue;
 
-    if (!out.porPais[pais]) out.porPais[pais] = { cnt:0, val:0, qtd:0, clientes:new Set() };
+    if (!out.porPais[pais]) out.porPais[pais] = { cnt:0, val:0, fat:0, qtd:0, clientes:new Set(), clientesByVal:{} };
     if (!isDev) out.porPais[pais].cnt++;
     out.porPais[pais].val += r[C.val];
+    out.porPais[pais].fat += r[C.fat];
     out.porPais[pais].qtd += r[C.qtd];
     out.porPais[pais].clientes.add(r[C.cl]);
+    // Acumula valor por cliente para Top 3 (excluindo CLIENTE PADRAO depois)
+    const cliRow = DATA.clients[r[C.cl]] || ['','',''];
+    if (cliRow[1] !== 'CLIENTE PADRAO') {
+      out.porPais[pais].clientesByVal[r[C.cl]] = (out.porPais[pais].clientesByVal[r[C.cl]] || 0) + r[C.val];
+    }
 
     const ym = r[C.ano]*100 + r[C.mes];
     if (!out.porMes[ym]) out.porMes[ym] = { val:0, cnt:0 };
@@ -607,7 +632,10 @@ function buildMap() {
   }
 }
 
+// Cache do agg para o tooltip acessar
+let _lastMapAgg = null;
 function renderMap(agg) {
+  _lastMapAgg = agg;
   const layer = document.getElementById('latam_paths');
   if (!layer) return;
   let max = 0;
@@ -628,17 +656,74 @@ function renderMap(agg) {
       p.classList.add('empty');
     }
     p.classList.toggle('selected', state.selectedPais === ds);
-    let title = p.querySelector('title');
-    if (!title) {
-      title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      p.appendChild(title);
-    }
-    title.textContent = ds + (info ? ' — ' + fmtMoney(info.val) + ' · ' + info.cnt + ' pedidos' : ' — sem vendas');
+    // Remove o <title> SVG (substituído pelo tooltip rico)
+    const oldTitle = p.querySelector('title');
+    if (oldTitle) oldTitle.remove();
   });
   document.getElementById('legend_max').textContent = fmtMoneyShort(max);
   const top = Object.entries(agg.porPais).sort((a,b)=>b[1].val-a[1].val)[0];
   document.getElementById('map_info').textContent =
     Object.keys(agg.porPais).length + ' país(es)' + (top ? ' · top: ' + top[0] : '');
+}
+
+// Tooltip rico no mousemove — mesmo padrão do mapa Brasil.
+function setupMapTooltip() {
+  const svg = document.getElementById('latam_map');
+  const tooltip = document.getElementById('map_tooltip');
+  if (!svg || !tooltip) return;
+  svg.addEventListener('mousemove', function(e) {
+    let target = e.target;
+    while (target && target.tagName !== 'path') target = target.parentNode;
+    if (!target || target.tagName !== 'path' || !target.classList.contains('pais')) {
+      tooltip.style.opacity = 0;
+      return;
+    }
+    if (target.classList.contains('brazil-home')) {
+      tooltip.style.opacity = 0;
+      return;
+    }
+    const ds = target.dataset.pais;
+    const info = _lastMapAgg ? _lastMapAgg.porPais[ds] : null;
+    const wrap = svg.parentElement;
+    const rect = wrap.getBoundingClientRect();
+    let left = e.clientX - rect.left + 14;
+    let top = e.clientY - rect.top + 14;
+    // Mantém dentro do container
+    if (left + 280 > rect.width) left = rect.width - 285;
+    if (top + 200 > rect.height) top = rect.height - 205;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+    tooltip.style.opacity = 1;
+    if (!info || info.val === 0) {
+      // País sem vendas no recorte — mostra mensagem simples
+      tooltip.innerHTML = '<h4>' + escHtml(ds) + '</h4>'
+        + '<div class="empty-note">Sem vendas neste recorte.</div>';
+      return;
+    }
+    // Top 3 clientes (excluindo CLIENTE PADRAO já filtrado no aggregate)
+    const topClis = Object.entries(info.clientesByVal || {})
+      .sort(function(a,b){return b[1]-a[1];}).slice(0, 3);
+    const topHtml = topClis.map(function(e) {
+      const cli = DATA.clients[e[0]] || ['','',''];
+      const name = cli[1] || '—';
+      return '<div class="line"><span>' + escHtml(name.substring(0,24)) + '</span><span>' + fmtMoneyShort(e[1]) + '</span></div>';
+    }).join('');
+    let html = '<h4>' + escHtml(ds) + '</h4>'
+      + '<div class="line"><span>Pedidos</span><span>' + fmtInt(info.cnt) + '</span></div>'
+      + '<div class="line"><span>Faturamento</span><span>' + fmtMoneyShort(info.val) + '</span></div>'
+      + '<div class="line"><span>Líquido</span><span>' + fmtMoneyShort(info.fat) + '</span></div>';
+    if (topHtml) {
+      html += '<hr><div class="top-label">TOP 3 CLIENTES</div>' + topHtml;
+    } else {
+      // Fallback: sem clientes identificados → mostra valor + quantidade
+      html += '<hr>'
+        + '<div class="line"><span>Valor (pedidos)</span><span>' + fmtMoneyShort(info.val) + '</span></div>'
+        + '<div class="line"><span>Quantidade</span><span>' + fmtInt(Math.round(info.qtd)) + ' un.</span></div>'
+        + '<div class="empty-note">Sem clientes identificados (CLIENTE PADRAO ou ausente).</div>';
+    }
+    tooltip.innerHTML = html;
+  });
+  svg.addEventListener('mouseleave', function() { tooltip.style.opacity = 0; });
 }
 
 let _paisesSort = { k:'val', dir:-1 };
@@ -846,108 +931,4 @@ function init() {
   document.getElementById('f_to').max = ymdToISO(maxD);
 
   const usedVendedores = new Set();
-  for (let i = 0; i < DATA.orders.length; i++) {
-    const r = DATA.orders[i];
-    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
-    if (r[C.vd] >= 0) usedVendedores.add(r[C.vd]);
-  }
-  const vdSel = document.getElementById('f_vd');
-  Array.from(usedVendedores).sort(function(a,b){return DATA.vendedores[a].localeCompare(DATA.vendedores[b]);}).forEach(function(idx) {
-    const opt = document.createElement('option');
-    opt.value = idx; opt.textContent = DATA.vendedores[idx];
-    vdSel.appendChild(opt);
-  });
-
-  renderChips();
-
-  document.getElementById('f_nome').oninput = function(e) {
-    state.nome = e.target.value.trim();
-    if (state.nome !== state.nomeAutoFromCd) state.nomeAutoFromCd = '';
-    renderAll();
-  };
-  document.getElementById('f_cd').oninput = function(e) {
-    state.cd = e.target.value.trim();
-    syncCdMatch();
-    renderAll();
-  };
-  document.getElementById('f_from').onchange = function(e) {
-    state.rangeFrom = isoToYMD(e.target.value) || DATA_RANGE.min;
-    state.quickRange = 'custom';
-    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
-    renderAll();
-  };
-  document.getElementById('f_to').onchange = function(e) {
-    state.rangeTo = isoToYMD(e.target.value) || DATA_RANGE.max;
-    state.quickRange = 'custom';
-    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
-    renderAll();
-  };
-  document.querySelectorAll('#quick_ranges button').forEach(function(b) {
-    b.onclick = function() { applyQuickRange(b.dataset.q); renderAll(); };
-  });
-  vdSel.onchange = function(e) { state.vendedor = e.target.value; renderAll(); };
-  document.getElementById('f_incl_dev').onchange = function(e) { state.incluirDev = e.target.checked; renderAll(); };
-  document.getElementById('f_excl_padrao').onchange = function(e) { state.excluirPadrao = e.target.checked; renderAll(); };
-
-  const prodInp = document.getElementById('f_prod_search');
-  const prodRes = document.getElementById('prod_results');
-  prodInp.oninput = function() {
-    const q = prodInp.value.toLowerCase().trim();
-    if (q.length < 2) { prodRes.classList.remove('open'); return; }
-    const matches = [];
-    for (let i = 0; i < DATA.produtos.length; i++) {
-      if (DATA.produtos[i].toLowerCase().indexOf(q) >= 0) matches.push(i);
-      if (matches.length >= 30) break;
-    }
-    prodRes.innerHTML = matches.map(function(pi) {
-      return '<div data-pi="' + pi + '">' + escHtml(DATA.produtos[pi]) + '</div>';
-    }).join('') || '<div style="color:var(--muted)">Nenhum produto encontrado</div>';
-    prodRes.classList.add('open');
-    prodRes.querySelectorAll('div[data-pi]').forEach(function(d) {
-      d.onclick = function() {
-        state.produtos.add(+d.dataset.pi);
-        prodInp.value = ''; prodRes.classList.remove('open');
-        renderChips(); renderAll();
-      };
-    });
-  };
-  prodInp.onblur = function() { setTimeout(function() { prodRes.classList.remove('open'); }, 200); };
-
-  document.querySelectorAll('#tb_paises th').forEach(function(th) {
-    th.onclick = function() {
-      const k = th.dataset.k;
-      if (_paisesSort.k === k) _paisesSort.dir *= -1;
-      else { _paisesSort.k = k; _paisesSort.dir = (k === 'pais') ? 1 : -1; }
-      renderAll();
-    };
-  });
-
-  document.getElementById('btn_reset').onclick = function() {
-    state.nome=''; state.cd=''; state.nomeAutoFromCd='';
-    state.paises.clear(); state.tabelas.clear(); state.produtos.clear();
-    state.vendedor=''; state.incluirDev=true; state.excluirPadrao=false;
-    state.selectedPais = null;
-    document.getElementById('f_nome').value = '';
-    document.getElementById('f_cd').value = '';
-    document.getElementById('f_vd').value = '';
-    document.getElementById('f_incl_dev').checked = true;
-    document.getElementById('f_excl_padrao').checked = false;
-    document.getElementById('f_prod_search').value = '';
-    syncCdMatch();
-    applyQuickRange('all');
-    renderChips();
-    renderAll();
-  };
-
-  buildMap();
-  renderAll();
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  setTimeout(init, 30);
-}
-</script>
-</body>
-</html>
+ 

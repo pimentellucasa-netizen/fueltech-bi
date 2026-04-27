@@ -931,4 +931,110 @@ function init() {
   document.getElementById('f_to').max = ymdToISO(maxD);
 
   const usedVendedores = new Set();
- 
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    if (r[C.vd] >= 0) usedVendedores.add(r[C.vd]);
+  }
+  const vdSel = document.getElementById('f_vd');
+  Array.from(usedVendedores).sort(function(a,b){return DATA.vendedores[a].localeCompare(DATA.vendedores[b]);}).forEach(function(idx) {
+    const opt = document.createElement('option');
+    opt.value = idx; opt.textContent = DATA.vendedores[idx];
+    vdSel.appendChild(opt);
+  });
+
+  renderChips();
+
+  document.getElementById('f_nome').oninput = function(e) {
+    state.nome = e.target.value.trim();
+    if (state.nome !== state.nomeAutoFromCd) state.nomeAutoFromCd = '';
+    renderAll();
+  };
+  document.getElementById('f_cd').oninput = function(e) {
+    state.cd = e.target.value.trim();
+    syncCdMatch();
+    renderAll();
+  };
+  document.getElementById('f_from').onchange = function(e) {
+    state.rangeFrom = isoToYMD(e.target.value) || DATA_RANGE.min;
+    state.quickRange = 'custom';
+    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
+    renderAll();
+  };
+  document.getElementById('f_to').onchange = function(e) {
+    state.rangeTo = isoToYMD(e.target.value) || DATA_RANGE.max;
+    state.quickRange = 'custom';
+    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
+    renderAll();
+  };
+  document.querySelectorAll('#quick_ranges button').forEach(function(b) {
+    b.onclick = function() { applyQuickRange(b.dataset.q); renderAll(); };
+  });
+  vdSel.onchange = function(e) { state.vendedor = e.target.value; renderAll(); };
+  document.getElementById('f_incl_dev').onchange = function(e) { state.incluirDev = e.target.checked; renderAll(); };
+  document.getElementById('f_excl_padrao').onchange = function(e) { state.excluirPadrao = e.target.checked; renderAll(); };
+
+  const prodInp = document.getElementById('f_prod_search');
+  const prodRes = document.getElementById('prod_results');
+  prodInp.oninput = function() {
+    const q = prodInp.value.toLowerCase().trim();
+    if (q.length < 2) { prodRes.classList.remove('open'); return; }
+    const matches = [];
+    for (let i = 0; i < DATA.produtos.length; i++) {
+      if (DATA.produtos[i].toLowerCase().indexOf(q) >= 0) matches.push(i);
+      if (matches.length >= 30) break;
+    }
+    prodRes.innerHTML = matches.map(function(pi) {
+      return '<div data-pi="' + pi + '">' + escHtml(DATA.produtos[pi]) + '</div>';
+    }).join('') || '<div style="color:var(--muted)">Nenhum produto encontrado</div>';
+    prodRes.classList.add('open');
+    prodRes.querySelectorAll('div[data-pi]').forEach(function(d) {
+      d.onclick = function() {
+        state.produtos.add(+d.dataset.pi);
+        prodInp.value = ''; prodRes.classList.remove('open');
+        renderChips(); renderAll();
+      };
+    });
+  };
+  prodInp.onblur = function() { setTimeout(function() { prodRes.classList.remove('open'); }, 200); };
+
+  document.querySelectorAll('#tb_paises th').forEach(function(th) {
+    th.onclick = function() {
+      const k = th.dataset.k;
+      if (_paisesSort.k === k) _paisesSort.dir *= -1;
+      else { _paisesSort.k = k; _paisesSort.dir = (k === 'pais') ? 1 : -1; }
+      renderAll();
+    };
+  });
+
+  document.getElementById('btn_reset').onclick = function() {
+    state.nome=''; state.cd=''; state.nomeAutoFromCd='';
+    state.paises.clear(); state.tabelas.clear(); state.produtos.clear();
+    state.vendedor=''; state.incluirDev=true; state.excluirPadrao=false;
+    state.selectedPais = null;
+    document.getElementById('f_nome').value = '';
+    document.getElementById('f_cd').value = '';
+    document.getElementById('f_vd').value = '';
+    document.getElementById('f_incl_dev').checked = true;
+    document.getElementById('f_excl_padrao').checked = false;
+    document.getElementById('f_prod_search').value = '';
+    syncCdMatch();
+    applyQuickRange('all');
+    renderChips();
+    renderAll();
+  };
+
+  buildMap();
+  setupMapTooltip();
+  renderAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  setTimeout(init, 30);
+}
+</script>
+</body>
+</html>
+  for (l

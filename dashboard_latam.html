@@ -1176,4 +1176,166 @@ function renderChips() {
   });
   const sp = document.getElementById('selected_prods');
   sp.innerHTML = Array.from(state.produtos).map(function(pi) {
-    return '<span class="chip" data-pi="' + pi + '">' + escHtml(DATA.produtos[pi].substring(0,20)) + ' <span class="x">×</span></sp
+    return '<span class="chip" data-pi="' + pi + '">' + escHtml(DATA.produtos[pi].substring(0,20)) + ' <span class="x">×</span></span>';
+  }).join('');
+  sp.querySelectorAll('.chip').forEach(function(ch) {
+    ch.onclick = function() {
+      state.produtos.delete(+ch.dataset.pi);
+      renderChips();
+      renderAll();
+    };
+  });
+}
+
+let _renderTimer;
+function renderAll() {
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(function() {
+    const agg = aggregate();
+    renderKPIs(agg);
+    renderMap(agg);
+    renderTabPaises(agg);
+    renderTimeline(agg);
+    renderTabAnos(agg);
+    renderProdutos(agg);
+    renderClientes(agg);
+  }, 30);
+}
+
+function init() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = '';
+
+  let minD = '99999999', maxD = '00000000';
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    const d = String(r[C.data]);
+    if (d < minD) minD = d;
+    if (d > maxD) maxD = d;
+  }
+  DATA_RANGE.min = minD; DATA_RANGE.max = maxD;
+  state.rangeFrom = minD; state.rangeTo = maxD;
+  document.getElementById('f_from').value = ymdToISO(minD);
+  document.getElementById('f_to').value = ymdToISO(maxD);
+  document.getElementById('f_from').min = ymdToISO(minD);
+  document.getElementById('f_from').max = ymdToISO(maxD);
+  document.getElementById('f_to').min = ymdToISO(minD);
+  document.getElementById('f_to').max = ymdToISO(maxD);
+
+  const usedVendedores = new Set();
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    if (r[C.vd] >= 0) usedVendedores.add(r[C.vd]);
+  }
+  const vdSel = document.getElementById('f_vd');
+  Array.from(usedVendedores).sort(function(a,b){
+    return DATA.vendedores[a].localeCompare(DATA.vendedores[b]);
+  }).forEach(function(idx) {
+    const opt = document.createElement('option');
+    opt.value = idx; opt.textContent = DATA.vendedores[idx];
+    vdSel.appendChild(opt);
+  });
+
+  renderChips();
+
+  document.getElementById('f_nome').oninput = function(e) {
+    state.nome = e.target.value.trim();
+    if (state.nome !== state.nomeAutoFromCd) state.nomeAutoFromCd = '';
+    renderAll();
+  };
+  document.getElementById('f_cd').oninput = function(e) {
+    state.cd = e.target.value.trim();
+    syncCdMatch();
+    renderAll();
+  };
+  document.getElementById('f_from').onchange = function(e) {
+    state.rangeFrom = isoToYMD(e.target.value) || DATA_RANGE.min;
+    state.quickRange = 'custom';
+    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
+    renderAll();
+  };
+  document.getElementById('f_to').onchange = function(e) {
+    state.rangeTo = isoToYMD(e.target.value) || DATA_RANGE.max;
+    state.quickRange = 'custom';
+    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
+    renderAll();
+  };
+  document.querySelectorAll('#quick_ranges button').forEach(function(b) {
+    b.onclick = function() { applyQuickRange(b.dataset.q); renderAll(); };
+  });
+  vdSel.onchange = function(e) { state.vendedor = e.target.value; renderAll(); };
+  document.getElementById('f_incl_dev').onchange = function(e) { state.incluirDev = e.target.checked; renderAll(); };
+  document.getElementById('f_excl_padrao').onchange = function(e) { state.excluirPadrao = e.target.checked; renderAll(); };
+
+  const prodInp = document.getElementById('f_prod_search');
+  const prodRes = document.getElementById('prod_results');
+  prodInp.oninput = function() {
+    const q = prodInp.value.toLowerCase().trim();
+    if (q.length < 2) { prodRes.classList.remove('open'); return; }
+    const matches = [];
+    for (let i = 0; i < DATA.produtos.length; i++) {
+      if (DATA.produtos[i].toLowerCase().indexOf(q) >= 0) matches.push(i);
+      if (matches.length >= 30) break;
+    }
+    prodRes.innerHTML = matches.map(function(pi) {
+      return '<div data-pi="' + pi + '">' + escHtml(DATA.produtos[pi]) + '</div>';
+    }).join('') || '<div style="color:var(--muted)">Nenhum produto encontrado</div>';
+    prodRes.classList.add('open');
+    prodRes.querySelectorAll('div[data-pi]').forEach(function(d) {
+      d.onclick = function() {
+        state.produtos.add(+d.dataset.pi);
+        prodInp.value = ''; prodRes.classList.remove('open');
+        renderChips(); renderAll();
+      };
+    });
+  };
+  prodInp.onblur = function() { setTimeout(function(){ prodRes.classList.remove('open'); }, 200); };
+
+  document.getElementById('btn_reset').onclick = function() {
+    state.nome=''; state.cd=''; state.nomeAutoFromCd='';
+    state.paises.clear(); state.tabelas.clear(); state.produtos.clear();
+    state.vendedor=''; state.incluirDev=true; state.excluirPadrao=false;
+    state.selectedPais = null;
+    state.timelineMode = 'single';
+    document.getElementById('f_nome').value = '';
+    document.getElementById('f_cd').value = '';
+    document.getElementById('f_vd').value = '';
+    document.getElementById('f_incl_dev').checked = true;
+    document.getElementById('f_excl_padrao').checked = false;
+    document.getElementById('f_prod_search').value = '';
+    syncCdMatch();
+    applyQuickRange('all');
+    document.querySelectorAll('#timeline_mode button').forEach(function(x){
+      x.classList.toggle('active', x.dataset.m === 'single');
+    });
+    document.getElementById('timeline_title').textContent = 'Faturamento por Mês';
+    renderChips();
+    renderAll();
+  };
+
+  document.querySelectorAll('#timeline_mode button').forEach(function(b) {
+    b.onclick = function() {
+      document.querySelectorAll('#timeline_mode button').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      state.timelineMode = b.dataset.m;
+      const t = document.getElementById('timeline_title');
+      if (t) t.textContent = state.timelineMode === 'yoy' ? 'Faturamento — Comparativo Anual' : 'Faturamento por Mês';
+      renderAll();
+    };
+  });
+
+  buildMap();
+  setupMapTooltip();
+  renderAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  setTimeout(init, 30);
+}
+</script>
+</body>
+</html>

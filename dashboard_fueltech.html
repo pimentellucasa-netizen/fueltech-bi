@@ -2928,7 +2928,7 @@ function escAttr(s) { return String(s||'').replace(/"/g,'&quot;').replace(/&/g,'
 function bboxOfCountries(countryNeNames, padding) {
   let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
   for (const ne of countryNeNames) {
-    const c = WWGEO.countries[ne];
+    const c = WGEO.countries[ne];
     if (!c) continue;
     const pts = c.d.match(/-?\d+\.?\d*/g);
     if (!pts) continue;
@@ -2948,7 +2948,7 @@ function bboxOfCountries(countryNeNames, padding) {
 }
 
 function bboxOfStates(country) {
-  const states = WWGEO.states[country] || {};
+  const states = WGEO.states[country] || {};
   let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
   for (const n in states) {
     const pts = states[n].d.match(/-?\d+\.?\d*/g);
@@ -3012,7 +3012,7 @@ function renderWorldHierarchy() {
     let maxC = 0;
     for (const c in cAgg) if (cAgg[c].val > maxC) maxC = cAgg[c].val;
     for (const ne in WGEO.countries) {
-      const country = WWGEO.countries[ne];
+      const country = WGEO.countries[ne];
       const cont = country.c;
       const dsName = PAIS_NE_TO_DATASET[ne] || ne;
       const v = (cAgg[cont] || {val:0}).val;
@@ -3055,7 +3055,7 @@ function renderWorldHierarchy() {
       if (v > max) max = v;
     }
     for (const ne in WGEO.countries) {
-      const country = WWGEO.countries[ne];
+      const country = WGEO.countries[ne];
       if (country.c !== continent) continue;
       const dsName = PAIS_NE_TO_DATASET[ne] || ne;
       const info = eAgg.porPais[dsName];
@@ -3075,22 +3075,16 @@ function renderWorldHierarchy() {
         const ds = p.dataset.pais;
         const ne = p.dataset.ne;
         // Só drill em países que têm estados
-        if (COUNTRIES_WITH_STATES.has(ne)) {
-          state.mapCountry = ne;
-          state.mapCountryDataset = ds;
-          renderAll();
-        } else {
-          // Toggle highlight só
-          layer.querySelectorAll('.ne-country').forEach(x => x.classList.remove('selected'));
-          p.classList.add('selected');
-        }
+        // Click no país: só destaca (não há nível 3 de estados aqui)
+        layer.querySelectorAll('.ne-country').forEach(x => x.classList.remove('selected'));
+        p.classList.add('selected');
       });
     });
 
   } else if (state.mapCountry) {
     // === NÍVEL 3: PAÍS — estados do país (drill total) ===
     const country = state.mapCountry;
-    const states = WWGEO.states[country] || {};
+    const states = WGEO.states[country] || {};
     svg.setAttribute('viewBox', bboxOfStates(country));
     // Para Brasil, podemos cruzar com agg.porUf usando códigos
     // Para outros países: por enquanto, só mostra os estados (sem dados específicos)

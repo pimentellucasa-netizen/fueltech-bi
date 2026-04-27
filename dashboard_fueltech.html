@@ -686,6 +686,7 @@
         <h2>
           Estados de Atuação
           <span id="vend_uf_summary" style="font-size:11px;color:var(--muted);font-weight:400"></span>
+          <button type="button" class="btn-ver-tudo" id="btn_ver_estados">Ver todos</button>
         </h2>
         <div class="chart-wrap"><canvas id="chart_vend_ufs"></canvas></div>
       </div>
@@ -817,6 +818,36 @@
     <div class="modal-foot">
       <span id="mca_summary">—</span>
       <span>Clique em um cliente para aplicar o filtro</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Estados de Atuação completo ===== -->
+<div class="modal-backdrop" id="modal_estados">
+  <div class="modal-box" role="dialog" aria-label="Lista de estados">
+    <div class="modal-head">
+      <h3>Estados de Atuação <span class="badge" id="me_badge">— recorte atual</span></h3>
+      <button type="button" class="modal-close" data-modal-close="modal_estados" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="modal-search" id="me_search" placeholder="Buscar UF ou nome do estado…">
+      <table class="modal-table" id="me_table">
+        <thead>
+          <tr>
+            <th data-k="uf">UF</th>
+            <th data-k="nome">Estado</th>
+            <th data-k="cnt" class="num">Pedidos</th>
+            <th data-k="val" class="num">Faturamento</th>
+            <th data-k="pct" class="num">% do Total</th>
+            <th data-k="ticket" class="num">Ticket Médio</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <span id="me_summary">—</span>
+      <span>Clique em um estado para filtrar o dashboard</span>
     </div>
   </div>
 </div>
@@ -1623,31 +1654,28 @@ function vendFilterLabel() {
   return parts.length ? ' — '+parts.join(' · ') : ' — (todos os filtros)';
 }
 function renderVendUfs(agg) {
-  // Filtra estados com val=0 (resíduo de filtros de produto/vendedor que zeram UFs).
-  const entries = Object.entries(agg.porUf)
+  // Filtra estados com val=0 e ordena
+  const allEntries = Object.entries(agg.porUf)
     .filter(e => e[1] && (e[1].val > 0 || e[1].cnt > 0))
     .sort((a,b) => b[1].val - a[1].val);
+  const total = allEntries.length;
 
-  // Top 10 ganham nome completo; demais ficam só com sigla para o eixo Y caber.
-  const labels = entries.map((e,i) => {
+  // Versão reduzida: top 10 estados
+  const entries = allEntries.slice(0, 10);
+  const labels = entries.map(e => {
     const uf = e[0];
     const nome = UF_NOME[uf];
-    if (i < 10 && nome) return uf + ' — ' + nome;
-    return uf;
+    return nome ? (uf + ' — ' + nome) : uf;
   });
   const ufs = entries.map(e => e[0]);
   const data = entries.map(e => e[1].val);
   const cnts = entries.map(e => e[1].cnt);
   document.getElementById('vend_uf_summary').textContent =
-    vendFilterLabel() + ' · ' + labels.length + ' estado(s)';
+    vendFilterLabel() + ' · ' + total + ' estado(s) · top 10';
 
-  // Ajusta altura do canvas conforme número de estados — garante todos os labels
-  // caibam (autoSkip:false não adianta se o canvas é muito pequeno).
+  // Reset altura para padrão (caso versão anterior tenha alterado)
   const wrap = document.getElementById('chart_vend_ufs').parentElement;
-  if (wrap) {
-    const minH = Math.max(280, entries.length * 22);
-    wrap.style.height = minH + 'px';
-  }
+  if (wrap) wrap.style.height = '';
 
   const cfg = {
     type: 'bar',
@@ -1675,8 +1703,6 @@ function renderVendUfs(agg) {
         },
         y: {
           grid: { display: false },
-          // autoSkip:false garante que TODOS os 27 estados apareçam como label.
-          // maxRotation 0 + minRotation 0 mantém horizontal.
           ticks: { font: { size: 10 }, autoSkip: false, maxRotation: 0, minRotation: 0 }
         }
       }
@@ -1684,6 +1710,74 @@ function renderVendUfs(agg) {
   };
   if (charts.vendUfs) { charts.vendUfs.destroy(); charts.vendUfs = null; }
   charts.vendUfs = new Chart(document.getElementById('chart_vend_ufs'), cfg);
+}
+
+// ===== Modal: Estados de Atuação completo =====
+const _meSort = { k: 'val', dir: -1 };
+let _meCache = [];
+
+function openEstadosModal() {
+  const agg = aggregate(filtered());
+  let totVal = 0;
+  for (const uf in agg.porUf) totVal += agg.porUf[uf].val;
+  _meCache = Object.entries(agg.porUf)
+    .filter(e => e[1] && (e[1].val > 0 || e[1].cnt > 0))
+    .map(e => ({
+      uf: e[0],
+      nome: UF_NOME[e[0]] || '—',
+      val: e[1].val,
+      cnt: e[1].cnt,
+      ticket: e[1].cnt > 0 ? (e[1].val / e[1].cnt) : 0,
+      pct: totVal > 0 ? (e[1].val / totVal * 100) : 0
+    }));
+  document.getElementById('me_search').value = '';
+  document.getElementById('me_badge').textContent = '· ' + _meCache.length + ' estado(s) no recorte';
+  renderEstadosModal();
+  openModal('modal_estados');
+}
+
+function renderEstadosModal() {
+  const q = (document.getElementById('me_search').value || '').toLowerCase().trim();
+  let arr = _meCache;
+  if (q) arr = arr.filter(x => x.uf.toLowerCase().indexOf(q) >= 0 || x.nome.toLowerCase().indexOf(q) >= 0);
+  const k = _meSort.k, dir = _meSort.dir;
+  arr = arr.slice().sort((a,b) => {
+    let av, bv;
+    if (k === 'uf' || k === 'nome') { av = a[k]; bv = b[k]; }
+    else { av = a[k]; bv = b[k]; }
+    if (typeof av === 'string') return dir * av.localeCompare(bv);
+    return dir * (av - bv);
+  });
+  const tbody = document.querySelector('#me_table tbody');
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum estado neste recorte.</td></tr>';
+  } else {
+    tbody.innerHTML = arr.map(x =>
+      '<tr data-uf="' + escHtml(x.uf) + '">'
+      + '<td><strong>' + escHtml(x.uf) + '</strong></td>'
+      + '<td>' + escHtml(x.nome) + '</td>'
+      + '<td class="num">' + fmtInt(x.cnt) + '</td>'
+      + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+      + '<td class="num">' + x.pct.toFixed(2).replace('.',',') + '%</td>'
+      + '<td class="num">' + fmtMoneyShort(x.ticket) + '</td>'
+      + '</tr>').join('');
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.onclick = () => {
+        // Aplica/toggle filtro de UF
+        const uf = tr.dataset.uf;
+        state.ufs.clear();
+        state.ufs.add(uf);
+        renderFilters();
+        renderAll();
+        closeModal('modal_estados');
+      };
+    });
+  }
+  document.querySelectorAll('#me_table th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.k === k);
+    th.dataset.arrow = th.dataset.k === k ? (dir === -1 ? '\u25bc' : '\u25b2') : '';
+  });
+  document.getElementById('me_summary').textContent = arr.length + ' de ' + _meCache.length + ' estados';
 }
 function renderVendTabelas(agg) {
   const entries=Object.entries(agg.porTabela).sort((a,b)=>b[1].val-a[1].val);
@@ -2558,6 +2652,18 @@ function init() {
   if (btnVerCli) btnVerCli.onclick = openClientsModal;
   const btnAZ = document.getElementById('btn_open_clients_az');
   if (btnAZ) btnAZ.onclick = openClientsAZModal;
+  const btnEst = document.getElementById('btn_ver_estados');
+  if (btnEst) btnEst.onclick = openEstadosModal;
+  const meSearch = document.getElementById('me_search');
+  if (meSearch) meSearch.oninput = renderEstadosModal;
+  document.querySelectorAll('#me_table th').forEach(function(th) {
+    th.onclick = function() {
+      const k = th.dataset.k;
+      if (_meSort.k === k) _meSort.dir *= -1;
+      else { _meSort.k = k; _meSort.dir = (k === 'uf' || k === 'nome') ? 1 : -1; }
+      renderEstadosModal();
+    };
+  });
 
   // Sort/search nos modais
   const mcSearch = document.getElementById('mc_search');

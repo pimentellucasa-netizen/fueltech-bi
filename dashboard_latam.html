@@ -558,4 +558,396 @@ function buildMap() {
   layer.innerHTML = '';
 
   // Lista de países a desenhar: LATAM + Brasil (matriz, cinza)
-  const todos = ['BRASIL', ...LATA
+  const todos = ['BRASIL'].concat(LATAM_DATASET);
+  const NE_NAMES = Object.assign({}, PAIS_DS_TO_NE, { 'BRASIL':'Brazil' });
+  let minX=1e9, minY=1e9, maxX=-1e9, maxY=-1e9;
+  const paths = [];
+  for (const ds of todos) {
+    const ne = NE_NAMES[ds];
+    const country = WGEO.countries[ne];
+    if (!country) continue;
+    paths.push({ ds: ds, d: country.d, isBrazil: ds === 'BRASIL' });
+    const pts = country.d.match(/-?\d+\.?\d*/g);
+    if (pts) {
+      for (let i = 0; i < pts.length; i+=2) {
+        const x = +pts[i], y = +pts[i+1];
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (minX !== 1e9) {
+    const pad = 8;
+    const vb = (minX-pad).toFixed(1) + ' ' + (minY-pad).toFixed(1) + ' ' + (maxX-minX+pad*2).toFixed(1) + ' ' + (maxY-minY+pad*2).toFixed(1);
+    document.getElementById('latam_map').setAttribute('viewBox', vb);
+  }
+  for (const p of paths) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    el.setAttribute('class', p.isBrazil ? 'pais brazil-home' : 'pais');
+    el.setAttribute('d', p.d);
+    el.setAttribute('data-pais', p.ds);
+    el.setAttribute('fill-rule', 'evenodd');
+    if (!p.isBrazil) {
+      el.addEventListener('click', (function(ds){ return function(){
+        if (state.selectedPais === ds) {
+          state.selectedPais = null;
+          state.paises.delete(ds);
+        } else {
+          state.selectedPais = ds;
+          state.paises.clear();
+          state.paises.add(ds);
+        }
+        renderChips();
+        renderAll();
+      }; })(p.ds));
+    }
+    layer.appendChild(el);
+  }
+}
+
+function renderMap(agg) {
+  const layer = document.getElementById('latam_paths');
+  if (!layer) return;
+  let max = 0;
+  for (const ds in agg.porPais) {
+    if (agg.porPais[ds].val > max) max = agg.porPais[ds].val;
+  }
+  layer.querySelectorAll('.pais').forEach(p => {
+    if (p.classList.contains('brazil-home')) return;
+    const ds = p.dataset.pais;
+    const info = agg.porPais[ds];
+    const v = info ? info.val : 0;
+    const t = max ? v / max : 0;
+    if (v > 0) {
+      p.setAttribute('fill', heatRGB(t));
+      p.classList.remove('empty');
+    } else {
+      p.setAttribute('fill', '#1a1a1a');
+      p.classList.add('empty');
+    }
+    p.classList.toggle('selected', state.selectedPais === ds);
+    let title = p.querySelector('title');
+    if (!title) {
+      title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      p.appendChild(title);
+    }
+    title.textContent = ds + (info ? ' — ' + fmtMoney(info.val) + ' · ' + info.cnt + ' pedidos' : ' — sem vendas');
+  });
+  document.getElementById('legend_max').textContent = fmtMoneyShort(max);
+  const top = Object.entries(agg.porPais).sort((a,b)=>b[1].val-a[1].val)[0];
+  document.getElementById('map_info').textContent =
+    Object.keys(agg.porPais).length + ' país(es)' + (top ? ' · top: ' + top[0] : '');
+}
+
+let _paisesSort = { k:'val', dir:-1 };
+function renderTabPaises(agg) {
+  const arr = Object.entries(agg.porPais).map(function(e) {
+    return { pais:e[0], cnt:e[1].cnt, val:e[1].val,
+      pct: agg.totVal > 0 ? (e[1].val / agg.totVal * 100) : 0 };
+  });
+  const k = _paisesSort.k, dir = _paisesSort.dir;
+  arr.sort(function(a,b) {
+    let av = a[k], bv = b[k];
+    if (typeof av === 'string') return dir * av.localeCompare(bv);
+    return dir * (av - bv);
+  });
+  const max = Math.max.apply(null, arr.map(function(x){return x.val;}).concat([1]));
+  const tbody = document.querySelector('#tb_paises tbody');
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted)">Sem vendas LATAM no recorte.</td></tr>';
+  } else {
+    tbody.innerHTML = arr.map(function(x) {
+      const w = Math.max(2, Math.round(x.val / max * 60));
+      return '<tr data-pais="' + x.pais + '">'
+        + '<td><span class="country-bar" style="width:' + w + 'px"></span>' + x.pais + '</td>'
+        + '<td class="num">' + fmtInt(x.cnt) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+        + '<td class="num">' + x.pct.toFixed(1).replace('.',',') + '%</td>'
+        + '</tr>';
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+      tr.onclick = function() {
+        const p = tr.dataset.pais;
+        if (state.selectedPais === p) {
+          state.selectedPais = null;
+          state.paises.delete(p);
+        } else {
+          state.selectedPais = p;
+          state.paises.clear();
+          state.paises.add(p);
+        }
+        renderChips();
+        renderAll();
+      };
+    });
+  }
+  document.getElementById('paises_info').textContent = arr.length + ' país(es)';
+}
+
+let charts = {};
+const MS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function renderTimeline(agg) {
+  const entries = Object.entries(agg.porMes).sort(function(a,b){return +a[0] - +b[0];});
+  const labels = entries.map(function(e) {
+    const ym = +e[0], y = Math.floor(ym/100), m = ym%100;
+    return MS[m-1] + '/' + (y%100);
+  });
+  const data = entries.map(function(e){return e[1].val;});
+  const cfg = {
+    type:'line',
+    data:{labels:labels, datasets:[{
+      data:data, borderColor:'#DC2626',
+      backgroundColor:'rgba(220,38,38,.15)',
+      tension:0.3, fill:true, borderWidth:2,
+      pointRadius:3, pointBackgroundColor:'#DC2626'
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(c){return fmtMoney(c.parsed.y);}}}
+      },
+      scales:{
+        x:{grid:{color:'#222'},ticks:{color:'#aaa',font:{size:9}}},
+        y:{grid:{color:'#222'},ticks:{color:'#aaa',font:{size:9},callback:function(v){return fmtMoneyShort(v);}}}
+      }
+    }
+  };
+  if (charts.timeline) charts.timeline.destroy();
+  charts.timeline = new Chart(document.getElementById('chart_timeline'), cfg);
+}
+
+function renderProdutos(agg) {
+  const top = Object.entries(agg.porProduto)
+    .sort(function(a,b){return b[1].val - a[1].val;}).slice(0, 10);
+  const labels = top.map(function(e){return e[0].length > 28 ? e[0].substring(0,26)+'…' : e[0];});
+  const data = top.map(function(e){return e[1].val;});
+  const qtds = top.map(function(e){return Math.round(e[1].qtd);});
+  const cfg = {
+    type:'bar',
+    data:{labels:labels, datasets:[{data:data, backgroundColor:'#DC2626', borderRadius:3}]},
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(c){return fmtMoney(c.parsed.x)+' · '+fmtInt(qtds[c.dataIndex])+' un.';}}}
+      },
+      scales:{
+        x:{ticks:{callback:function(v){return fmtMoneyShort(v);},color:'#aaa',font:{size:9}},grid:{color:'#222'}},
+        y:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}}
+      }
+    }
+  };
+  if (charts.produtos) charts.produtos.destroy();
+  charts.produtos = new Chart(document.getElementById('chart_produtos'), cfg);
+}
+
+function renderClientes(agg) {
+  const arr = Object.entries(agg.porCliente)
+    .map(function(e) {
+      const c = DATA.clients[e[0]] || ['','',''];
+      return { cd:c[0]||'', nome:c[1]||'—',
+        val:e[1].val, cnt:e[1].cnt, paises:Array.from(e[1].paises).join(', ') };
+    })
+    .sort(function(a,b){return b.val - a.val;}).slice(0, 20);
+  const tbody = document.querySelector('#tb_clientes tbody');
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">—</td></tr>';
+  } else {
+    tbody.innerHTML = arr.map(function(x,i) {
+      return '<tr><td>' + (i+1) + '</td>'
+        + '<td><strong>' + escHtml(x.nome) + '</strong> <span style="color:var(--muted);font-size:10px">' + escHtml(x.cd) + '</span></td>'
+        + '<td>' + escHtml(x.paises) + '</td>'
+        + '<td class="num">' + fmtInt(x.cnt) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+  document.getElementById('clientes_info').textContent = arr.length + ' clientes';
+}
+
+function renderChips() {
+  const fp = document.getElementById('f_pais');
+  fp.innerHTML = LATAM_DATASET.map(function(p) {
+    return '<span class="chip ' + (state.paises.has(p)?'active':'') + '" data-v="' + p + '">' + p + '</span>';
+  }).join('');
+  fp.querySelectorAll('.chip').forEach(function(ch) {
+    ch.onclick = function() {
+      const v = ch.dataset.v;
+      if (state.paises.has(v)) state.paises.delete(v);
+      else state.paises.add(v);
+      state.selectedPais = state.paises.size === 1 ? Array.from(state.paises)[0] : null;
+      renderChips();
+      renderAll();
+    };
+  });
+  const ft = document.getElementById('f_tb');
+  ft.innerHTML = DATA.tabelas.map(function(t,i) {
+    return '<span class="chip ' + (state.tabelas.has(i)?'active':'') + '" data-v="' + i + '">' + t + '</span>';
+  }).join('');
+  ft.querySelectorAll('.chip').forEach(function(ch) {
+    ch.onclick = function() {
+      const v = +ch.dataset.v;
+      if (state.tabelas.has(v)) state.tabelas.delete(v);
+      else state.tabelas.add(v);
+      renderChips();
+      renderAll();
+    };
+  });
+  const sp = document.getElementById('selected_prods');
+  sp.innerHTML = Array.from(state.produtos).map(function(pi) {
+    return '<span class="chip" data-pi="' + pi + '">' + escHtml(DATA.produtos[pi].substring(0,20)) + ' <span class="x">×</span></span>';
+  }).join('');
+  sp.querySelectorAll('.chip').forEach(function(ch) {
+    ch.onclick = function() {
+      state.produtos.delete(+ch.dataset.pi);
+      renderChips();
+      renderAll();
+    };
+  });
+}
+
+let _renderTimer;
+function renderAll() {
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(function() {
+    const agg = aggregate();
+    renderKPIs(agg);
+    renderMap(agg);
+    renderTabPaises(agg);
+    renderTimeline(agg);
+    renderProdutos(agg);
+    renderClientes(agg);
+  }, 30);
+}
+
+function init() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = '';
+
+  let minD = '99999999', maxD = '00000000';
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    const d = String(r[C.data]);
+    if (d < minD) minD = d;
+    if (d > maxD) maxD = d;
+  }
+  DATA_RANGE.min = minD; DATA_RANGE.max = maxD;
+  state.rangeFrom = minD; state.rangeTo = maxD;
+  document.getElementById('f_from').value = ymdToISO(minD);
+  document.getElementById('f_to').value = ymdToISO(maxD);
+  document.getElementById('f_from').min = ymdToISO(minD);
+  document.getElementById('f_from').max = ymdToISO(maxD);
+  document.getElementById('f_to').min = ymdToISO(minD);
+  document.getElementById('f_to').max = ymdToISO(maxD);
+
+  const usedVendedores = new Set();
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    if (r[C.vd] >= 0) usedVendedores.add(r[C.vd]);
+  }
+  const vdSel = document.getElementById('f_vd');
+  Array.from(usedVendedores).sort(function(a,b){return DATA.vendedores[a].localeCompare(DATA.vendedores[b]);}).forEach(function(idx) {
+    const opt = document.createElement('option');
+    opt.value = idx; opt.textContent = DATA.vendedores[idx];
+    vdSel.appendChild(opt);
+  });
+
+  renderChips();
+
+  document.getElementById('f_nome').oninput = function(e) {
+    state.nome = e.target.value.trim();
+    if (state.nome !== state.nomeAutoFromCd) state.nomeAutoFromCd = '';
+    renderAll();
+  };
+  document.getElementById('f_cd').oninput = function(e) {
+    state.cd = e.target.value.trim();
+    syncCdMatch();
+    renderAll();
+  };
+  document.getElementById('f_from').onchange = function(e) {
+    state.rangeFrom = isoToYMD(e.target.value) || DATA_RANGE.min;
+    state.quickRange = 'custom';
+    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
+    renderAll();
+  };
+  document.getElementById('f_to').onchange = function(e) {
+    state.rangeTo = isoToYMD(e.target.value) || DATA_RANGE.max;
+    state.quickRange = 'custom';
+    document.querySelectorAll('#quick_ranges button').forEach(function(b){b.classList.remove('active');});
+    renderAll();
+  };
+  document.querySelectorAll('#quick_ranges button').forEach(function(b) {
+    b.onclick = function() { applyQuickRange(b.dataset.q); renderAll(); };
+  });
+  vdSel.onchange = function(e) { state.vendedor = e.target.value; renderAll(); };
+  document.getElementById('f_incl_dev').onchange = function(e) { state.incluirDev = e.target.checked; renderAll(); };
+  document.getElementById('f_excl_padrao').onchange = function(e) { state.excluirPadrao = e.target.checked; renderAll(); };
+
+  const prodInp = document.getElementById('f_prod_search');
+  const prodRes = document.getElementById('prod_results');
+  prodInp.oninput = function() {
+    const q = prodInp.value.toLowerCase().trim();
+    if (q.length < 2) { prodRes.classList.remove('open'); return; }
+    const matches = [];
+    for (let i = 0; i < DATA.produtos.length; i++) {
+      if (DATA.produtos[i].toLowerCase().indexOf(q) >= 0) matches.push(i);
+      if (matches.length >= 30) break;
+    }
+    prodRes.innerHTML = matches.map(function(pi) {
+      return '<div data-pi="' + pi + '">' + escHtml(DATA.produtos[pi]) + '</div>';
+    }).join('') || '<div style="color:var(--muted)">Nenhum produto encontrado</div>';
+    prodRes.classList.add('open');
+    prodRes.querySelectorAll('div[data-pi]').forEach(function(d) {
+      d.onclick = function() {
+        state.produtos.add(+d.dataset.pi);
+        prodInp.value = ''; prodRes.classList.remove('open');
+        renderChips(); renderAll();
+      };
+    });
+  };
+  prodInp.onblur = function() { setTimeout(function() { prodRes.classList.remove('open'); }, 200); };
+
+  document.querySelectorAll('#tb_paises th').forEach(function(th) {
+    th.onclick = function() {
+      const k = th.dataset.k;
+      if (_paisesSort.k === k) _paisesSort.dir *= -1;
+      else { _paisesSort.k = k; _paisesSort.dir = (k === 'pais') ? 1 : -1; }
+      renderAll();
+    };
+  });
+
+  document.getElementById('btn_reset').onclick = function() {
+    state.nome=''; state.cd=''; state.nomeAutoFromCd='';
+    state.paises.clear(); state.tabelas.clear(); state.produtos.clear();
+    state.vendedor=''; state.incluirDev=true; state.excluirPadrao=false;
+    state.selectedPais = null;
+    document.getElementById('f_nome').value = '';
+    document.getElementById('f_cd').value = '';
+    document.getElementById('f_vd').value = '';
+    document.getElementById('f_incl_dev').checked = true;
+    document.getElementById('f_excl_padrao').checked = false;
+    document.getElementById('f_prod_search').value = '';
+    syncCdMatch();
+    applyQuickRange('all');
+    renderChips();
+    renderAll();
+  };
+
+  buildMap();
+  renderAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  setTimeout(init, 30);
+}
+</script>
+</body>
+</html>

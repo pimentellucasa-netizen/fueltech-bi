@@ -155,6 +155,55 @@
     background:linear-gradient(to right,#1a1a1a 0%,#3c0c0c 10%,#7f1d1d 25%,
       #b91c1c 45%,#dc2626 65%,#ef4444 85%,#fb923c 100%)}
 
+  /* Botão Lista alfabética */
+  .btn-list-clients{margin-top:6px;width:100%;padding:7px 9px;
+    background:transparent;border:1px dashed var(--border-strong);
+    color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;
+    border-radius:var(--radius-sm);transition:all .12s;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;gap:5px}
+  .btn-list-clients:hover{border-color:var(--orange);color:var(--orange);
+    border-style:solid;background:rgba(220,38,38,.05)}
+
+  /* Modal */
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+    z-index:500;backdrop-filter:blur(2px)}
+  .modal-backdrop.open{display:flex;align-items:center;justify-content:center}
+  .modal-box{background:var(--card-grad);border:1px solid var(--border-strong);
+    border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.45);
+    width:min(900px,92vw);max-height:88vh;display:flex;flex-direction:column;
+    overflow:hidden;border-top:3px solid var(--orange)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg-alt)}
+  .modal-head h3{margin:0;font-size:14px;font-weight:700;color:var(--text)}
+  .modal-head h3 .badge{font-size:11px;color:var(--muted);font-weight:400;margin-left:8px}
+  .modal-close{background:transparent;border:none;color:var(--muted);
+    font-size:22px;cursor:pointer;padding:0 8px;line-height:1}
+  .modal-close:hover{color:var(--orange)}
+  .modal-body{padding:14px 20px;overflow:auto;flex:1}
+  .modal-search{width:100%;padding:9px 12px;background:var(--input-bg);
+    border:1px solid var(--input-border);color:var(--text);
+    border-radius:var(--radius-sm);font-size:13px;font-family:inherit;margin-bottom:10px}
+  .modal-search:focus{outline:none;border-color:var(--orange);
+    box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+  .modal-table{width:100%;border-collapse:collapse;font-size:12px}
+  .modal-table thead{position:sticky;top:0;background:var(--bg-alt);z-index:1}
+  .modal-table th{padding:8px 10px;text-align:left;font-weight:700;color:var(--text);
+    border-bottom:1px solid var(--border-strong);font-size:11px;
+    text-transform:uppercase;letter-spacing:.5px}
+  .modal-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text-soft)}
+  .modal-table tbody tr{cursor:pointer;transition:background .1s}
+  .modal-table tbody tr:hover{background:rgba(220,38,38,.08)}
+  .modal-letter-nav{display:flex;flex-wrap:wrap;gap:3px;padding:6px 0;
+    margin-bottom:10px;border-bottom:1px solid var(--border)}
+  .modal-letter-nav button{background:var(--chip-bg);color:var(--text-soft);
+    border:1px solid var(--border);font-size:10px;padding:3px 7px;border-radius:3px;
+    cursor:pointer;font-weight:700;letter-spacing:.5px;font-family:inherit}
+  .modal-letter-nav button:hover,
+  .modal-letter-nav button.active{background:var(--orange);color:#000;border-color:var(--orange)}
+  .modal-foot{padding:10px 20px;border-top:1px solid var(--border);
+    background:var(--bg-alt);font-size:11px;color:var(--muted);
+    display:flex;justify-content:space-between;align-items:center}
+
   /* Tooltip identidade Brasil */
   .map-wrap{position:relative}
   .tooltip{position:absolute; background:#000; border:1px solid var(--orange);
@@ -220,6 +269,9 @@
       <label>Código do Cliente</label>
       <input type="text" id="f_cd" placeholder="Ex: 010790">
       <div id="cd_match_info" class="cd-match"></div>
+      <button type="button" id="btn_open_clients_az" class="btn-list-clients">
+        <span>≡</span> Lista alfabética de clientes
+      </button>
     </div>
 
     <h3>Período</h3>
@@ -233,14 +285,14 @@
     </div>
     <div class="filter-group">
       <div class="quick-ranges" id="quick_ranges">
-        <button data-q="30d">30d</button>
-        <button data-q="90d">90d</button>
+        <button data-q="7d">7 dias</button>
+        <button data-q="15d">15 dias</button>
+        <button data-q="30d">30 dias</button>
         <button data-q="ytd">YTD</button>
         <button data-q="3m">3m</button>
         <button data-q="6m">6m</button>
-        <button data-q="12m">12m</button>
-        <button data-q="2y">2a</button>
-        <button data-q="all" class="active">Tudo</button>
+        <button data-q="12m" class="active">12m</button>
+        <button data-q="all">Tudo</button>
       </div>
     </div>
 
@@ -376,6 +428,30 @@
       </table>
     </div>
   </main>
+</div>
+
+<!-- Modal: Lista Alfabética de Clientes -->
+<div class="modal-backdrop" id="modal_clients_az">
+  <div class="modal-box" role="dialog" aria-label="Lista alfabética">
+    <div class="modal-head">
+      <h3>Lista de Clientes <span class="badge" id="mca_count">—</span></h3>
+      <button type="button" class="modal-close" aria-label="Fechar" onclick="document.getElementById(\'modal_clients_az\').classList.remove(\'open\');document.body.style.overflow=\'\';">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="modal-search" id="mca_search" placeholder="Buscar nome, fantasia ou código…">
+      <div class="modal-letter-nav" id="mca_letters"></div>
+      <table class="modal-table" id="mca_table">
+        <thead>
+          <tr><th>Código</th><th>Nome</th><th>Fantasia</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <span id="mca_summary">—</span>
+      <span>Clique em um cliente para aplicar o filtro</span>
+    </div>
+  </div>
 </div>
 
 <script src="dashboard_geo_world.js"></script>
@@ -514,7 +590,9 @@ function applyQuickRange(q) {
     state.rangeTo = DATA_RANGE.max;
   } else {
     let from;
-    if (q === '30d') from = dateAdd(DATA_RANGE.max, -29);
+    if (q === '7d') from = dateAdd(DATA_RANGE.max, -6);
+    else if (q === '15d') from = dateAdd(DATA_RANGE.max, -14);
+    else if (q === '30d') from = dateAdd(DATA_RANGE.max, -29);
     else if (q === '90d') from = dateAdd(DATA_RANGE.max, -89);
     else if (q === '3m') from = dateAddMonths(DATA_RANGE.max, -3);
     else if (q === '6m') from = dateAddMonths(DATA_RANGE.max, -6);
@@ -1202,6 +1280,91 @@ function renderAll() {
   }, 30);
 }
 
+// === Modal: Lista Alfabética de Clientes ===
+let _mcaCache = null;
+let _mcaActiveLetter = null;
+function buildClientsAZCache() {
+  const arr = [];
+  for (let i = 0; i < DATA.clients.length; i++) {
+    const c = DATA.clients[i];
+    if (!c) continue;
+    const nome = (c[1]||'').trim();
+    const letter = nome ? nome.charAt(0).toUpperCase() : '#';
+    arr.push({ idx:i, cd:c[0]||'', nome:nome, fant:c[2]||'',
+      letter: /[A-Z]/.test(letter) ? letter : '#' });
+  }
+  arr.sort(function(a,b){
+    return (a.nome||'').localeCompare(b.nome||'') || (a.cd||'').localeCompare(b.cd||'');
+  });
+  return arr;
+}
+function openClientsAZModal() {
+  if (!_mcaCache) _mcaCache = buildClientsAZCache();
+  document.getElementById('mca_count').textContent = '· ' + fmtInt(_mcaCache.length) + ' clientes cadastrados';
+  document.getElementById('mca_search').value = '';
+  _mcaActiveLetter = null;
+  const letterSet = {};
+  for (let i = 0; i < _mcaCache.length; i++) letterSet[_mcaCache[i].letter] = true;
+  const letters = Object.keys(letterSet).sort();
+  const nav = document.getElementById('mca_letters');
+  nav.innerHTML = '<button data-l="">TODOS</button>' +
+    letters.map(function(l){return '<button data-l="' + l + '">' + l + '</button>';}).join('');
+  nav.querySelectorAll('button').forEach(function(b){
+    b.onclick = function(){
+      _mcaActiveLetter = b.dataset.l || null;
+      nav.querySelectorAll('button').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      renderClientsAZ();
+    };
+  });
+  nav.querySelector('button[data-l=""]').classList.add('active');
+  renderClientsAZ();
+  document.getElementById('modal_clients_az').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function renderClientsAZ() {
+  const q = (document.getElementById('mca_search').value || '').toLowerCase().trim();
+  let arr = _mcaCache;
+  if (_mcaActiveLetter) arr = arr.filter(function(x){return x.letter === _mcaActiveLetter;});
+  if (q) {
+    arr = arr.filter(function(x){
+      return x.cd.toLowerCase().indexOf(q) >= 0 ||
+             x.nome.toLowerCase().indexOf(q) >= 0 ||
+             x.fant.toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  const truncated = arr.length > 500;
+  const view = truncated ? arr.slice(0, 500) : arr;
+  const tbody = document.querySelector('#mca_table tbody');
+  if (!view.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--muted)">Nenhum cliente encontrado.</td></tr>';
+  } else {
+    tbody.innerHTML = view.map(function(x){
+      return '<tr data-cd="' + escHtml(x.cd) + '" data-nome="' + escHtml(x.nome) + '">'
+        + '<td>' + escHtml(x.cd) + '</td>'
+        + '<td>' + escHtml(x.nome||'—') + '</td>'
+        + '<td>' + escHtml(x.fant) + '</td>'
+        + '</tr>';
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(function(tr){
+      tr.onclick = function(){
+        state.cd = tr.dataset.cd;
+        state.nome = tr.dataset.nome;
+        state.nomeAutoFromCd = '';
+        document.getElementById('f_cd').value = state.cd;
+        document.getElementById('f_nome').value = state.nome;
+        syncCdMatch();
+        document.getElementById('modal_clients_az').classList.remove('open');
+        document.body.style.overflow = '';
+        renderAll();
+      };
+    });
+  }
+  document.getElementById('mca_summary').textContent =
+    truncated ? 'Mostrando primeiros 500 de ' + fmtInt(arr.length) + ' resultados — refine a busca'
+              : fmtInt(arr.length) + ' cliente(s)';
+}
+
 function init() {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = '';
@@ -1216,6 +1379,8 @@ function init() {
   }
   DATA_RANGE.min = minD; DATA_RANGE.max = maxD;
   state.rangeFrom = minD; state.rangeTo = maxD;
+  // Default: 12m
+  applyQuickRange('12m');
   document.getElementById('f_from').value = ymdToISO(minD);
   document.getElementById('f_to').value = ymdToISO(maxD);
   document.getElementById('f_from').min = ymdToISO(minD);
@@ -1324,6 +1489,28 @@ function init() {
       if (t) t.textContent = state.timelineMode === 'yoy' ? 'Faturamento — Comparativo Anual' : 'Faturamento por Mês';
       renderAll();
     };
+  });
+
+  // Lista alfabética
+  const btnAZ = document.getElementById('btn_open_clients_az');
+  if (btnAZ) btnAZ.onclick = openClientsAZModal;
+  const mcaSearch = document.getElementById('mca_search');
+  if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
+  // Fecha modal com clique no backdrop ou ESC
+  document.getElementById('modal_clients_az').addEventListener('click', function(e){
+    if (e.target.id === 'modal_clients_az') {
+      this.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      const m = document.getElementById('modal_clients_az');
+      if (m && m.classList.contains('open')) {
+        m.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
   });
 
   buildMap();

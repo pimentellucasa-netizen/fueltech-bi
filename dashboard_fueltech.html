@@ -3375,4 +3375,186 @@ function init() {
       if (_mcSort.k === k) _mcSort.dir *= -1;
       else { _mcSort.k = k; _mcSort.dir = (k === 'cd' || k === 'nome' || k === 'fant' || k === 'uf') ? 1 : -1; }
       renderClientsModal();
-    
+    };
+  });
+  const mcaSearch = document.getElementById('mca_search');
+  if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
+
+  // Fechar modais
+  document.querySelectorAll('[data-modal-close]').forEach(function(b) {
+    b.onclick = function() { closeModal(b.dataset.modalClose); };
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(function(bd) {
+    bd.addEventListener('click', function(e) {
+      if (e.target === bd) closeModal(bd.id);
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-backdrop.open').forEach(function(m) { closeModal(m.id); });
+    }
+  });
+
+  // ===== Calendário =====
+  document.getElementById('range_trigger').onclick = toggleCalendar;
+  document.getElementById('rp_prev').onclick  = () => navCalendar(-1);
+  document.getElementById('rp_next').onclick  = () => navCalendar(1);
+  document.getElementById('rp_title').onclick = zoomOutCalendar;
+  document.getElementById('rp_cancel').onclick = closeCalendar;
+  // Inputs manuais de data
+  function applyDateInputChange() {
+    const fromInp = document.getElementById('rp_from_input');
+    const toInp = document.getElementById('rp_to_input');
+    const f = isoToYMD(fromInp.value);
+    const t = isoToYMD(toInp.value);
+    if (f) {
+      const minN = ymdNum({y:DATA_RANGE.minY,m:DATA_RANGE.minM,d:DATA_RANGE.minD});
+      const maxN = ymdNum({y:DATA_RANGE.maxY,m:DATA_RANGE.maxM,d:DATA_RANGE.maxD});
+      const fN = ymdNum(f);
+      if (fN >= minN && fN <= maxN) {
+        CAL.pendingFrom = f;
+        if (CAL.pendingTo && ymdNum(CAL.pendingTo) < fN) CAL.pendingTo = null;
+        CAL.viewY = f.y; CAL.viewM = f.m;
+      }
+    } else if (fromInp.value === '') {
+      CAL.pendingFrom = null;
+    }
+    if (t) {
+      const minN = ymdNum({y:DATA_RANGE.minY,m:DATA_RANGE.minM,d:DATA_RANGE.minD});
+      const maxN = ymdNum({y:DATA_RANGE.maxY,m:DATA_RANGE.maxM,d:DATA_RANGE.maxD});
+      const tN = ymdNum(t);
+      if (tN >= minN && tN <= maxN) {
+        if (!CAL.pendingFrom || ymdNum(CAL.pendingFrom) <= tN) {
+          CAL.pendingTo = t;
+        }
+      }
+    } else if (toInp.value === '') {
+      CAL.pendingTo = null;
+    }
+    CAL.picking = CAL.pendingFrom && !CAL.pendingTo ? 'to' : 'from';
+    renderCalendar();
+    updateApplyBtn();
+  }
+  const rpFromInp = document.getElementById('rp_from_input');
+  const rpToInp = document.getElementById('rp_to_input');
+  if (rpFromInp) rpFromInp.onchange = applyDateInputChange;
+  if (rpToInp) rpToInp.onchange = applyDateInputChange;
+
+  document.getElementById('rp_apply').onclick = () => {
+    if (!CAL.pendingFrom) return;
+    if (!CAL.pendingTo) CAL.pendingTo = {...CAL.pendingFrom};
+    state.rangeFrom = {...CAL.pendingFrom};
+    state.rangeTo   = {...CAL.pendingTo};
+    state.compareYoY = CAL.pendingCompareYoY;
+    state.quickRange = 'custom';
+    closeCalendar();
+    syncRangeSelects();
+    renderAll();
+  };
+  // Reposiciona o popover se a janela redimensionar
+  window.addEventListener('resize', () => {
+    if (document.getElementById('range_popover').classList.contains('open')) positionPopover();
+  });
+
+  // Botões de quick range (YTD / 3m / 6m / 12m / Tudo)
+  document.querySelectorAll('#quick_ranges button').forEach(b => {
+    b.onclick = () => {
+      applyQuickRange(b.dataset.q);
+      syncRangeSelects();
+      renderAll();
+    };
+  });
+
+  // Toggle YoY (dentro do popover; padrão pendente: só aplica no botão "Aplicar")
+  document.getElementById('f_compare_yoy').onchange = e => {
+    CAL.pendingCompareYoY = e.target.checked;
+    updateCompareInfo();
+  };
+
+  document.getElementById('btn_reset').onclick=()=>{
+    state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
+    state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
+    state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
+    state.compareYoY=false; state.brOnly=false;
+    applyBrOnlyToggle();
+    applyQuickRange('12m');
+    document.getElementById('f_nome').value=''; document.getElementById('f_cd').value='';
+    document.getElementById('f_excl_padrao').checked=false;
+    document.getElementById('f_incl_dev').checked=true;
+    document.getElementById('f_prod_search').value='';
+    document.getElementById('f_compare_yoy').checked=false;
+    CAL.pendingCompareYoY = false;
+    syncCdMatch();
+    renderFilters(); renderAll();
+  };
+  document.querySelectorAll('#map_metric button').forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll('#map_metric button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); state.mapMetric=b.dataset.m; renderAll();};
+  });
+  document.querySelectorAll('#map_agg button').forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll('#map_agg button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); state.mapAgg=b.dataset.a; renderAll();};
+  });
+  document.querySelectorAll('#metric_scope button').forEach(b=>{
+    b.onclick=()=>{document.querySelectorAll('#metric_scope button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); renderAll();};
+  });
+  document.querySelectorAll('#table_detail th[data-k]').forEach(th=>{
+    th.onclick=()=>{const k=th.dataset.k;
+      if(state.tableSort.k===k)state.tableSort.dir*=-1; else {state.tableSort.k=k; state.tableSort.dir=-1;}
+      renderTable(lastRows);};
+  });
+  document.getElementById('btn_more').onclick=()=>{state.tableLimit+=500; renderTable(lastRows);};
+  document.getElementById('btn_csv').onclick=()=>{
+    const head=['Data','Tipo','NF','Cod_Cliente','Cliente','UF','Tabela','Vendedor','Qtd','Valor'];
+    const lines=[head.join(';')];
+    for(const r of lastRows){
+      const cli=CLIENT_BY_IDX[r[C.cl]]||['','',''];
+      lines.push([fmtDate(r[C.data]), r[C.tr]===1?'DEVOLUCAO':'VENDA', r[C.nf], cli[0],
+        '"'+(cli[1]||'').replace(/"/g,'""')+'"', DATA.ufs[r[C.uf]]||'',
+        r[C.tb]>=0?DATA.tabelas[r[C.tb]]:'', r[C.vd]>=0?DATA.vendedores[r[C.vd]]:'',
+        Math.round(r[C.qtd]),r[C.val].toFixed(2).replace('.',',')].join(';'));
+    }
+    const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='pedidos_fueltech.csv'; a.click();
+  };
+
+  // Inicializa o auto-match Cd -> Nome com o estado atual
+  syncCdMatch();
+  // Sincroniza UI do toggle Brasil-only
+  applyBrOnlyToggle();
+
+  // Theme toggle
+  const root = document.documentElement;
+  try {
+    const saved = localStorage.getItem('fueltech_theme');
+    if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
+  } catch(e){}
+  document.getElementById('theme_toggle').onclick = () => {
+    const cur = root.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('fueltech_theme', next); } catch(e){}
+    applyChartTheme();
+    Object.values(charts).forEach(c => c && c.destroy && c.destroy());
+    charts = {};
+    renderAll();
+  };
+}
+setTimeout(init,30);
+</script>
+
+
+<script>
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const o = document.getElementById('loading-overlay');
+    if (o) { o.style.transition='opacity 0.3s'; o.style.opacity='0'; }
+    setTimeout(() => { if (o) o.remove(); }, 300);
+  }, 100);
+});
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       

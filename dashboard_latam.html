@@ -1513,3 +1513,48 @@ function init() {
   document.querySelectorAll('#timeline_mode button').forEach(function(b) {
     b.onclick = function() {
       document.querySelectorAll('#timeline_mode button').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      state.timelineMode = b.dataset.m;
+      const t = document.getElementById('timeline_title');
+      if (t) t.textContent = state.timelineMode === 'yoy' ? 'Faturamento — Comparativo Anual' : 'Faturamento por Mês';
+      renderAll();
+    };
+  });
+
+  // Lista alfabética
+  const btnAZ = document.getElementById('btn_open_clients_az');
+  if (btnAZ) btnAZ.onclick = openClientsAZModal;
+  const mcaSearch = document.getElementById('mca_search');
+  if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
+  const modalAZ = document.getElementById('modal_clients_az');
+  if (modalAZ) {
+    modalAZ.addEventListener('click', function(e){
+      if (e.target.id === 'modal_clients_az') {
+        modalAZ.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    });
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      const m = document.getElementById('modal_clients_az');
+      if (m && m.classList.contains('open')) {
+        m.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
+  });
+
+  buildMap();
+  setupMapTooltip();
+  renderAll();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  setTimeout(init, 30);
+}
+</script>
+</body>
+</html>

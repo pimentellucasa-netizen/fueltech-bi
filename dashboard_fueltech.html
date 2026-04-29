@@ -583,6 +583,20 @@
   .btn-list-clients:hover{border-color:var(--orange);color:var(--orange);
     border-style:solid;background:rgba(220,38,38,.05)}
 
+  /* Botão "Evolução" no modal de clientes */
+  .btn-evol{background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.4);
+    color:var(--orange);width:30px;height:26px;border-radius:4px;cursor:pointer;
+    font-size:13px;padding:0;line-height:1;transition:all .15s;font-family:inherit}
+  .btn-evol:hover{background:var(--orange);color:#000;transform:scale(1.1)}
+
+  /* Cards de resumo no modal de evolução */
+  #mce_summary > div{flex:1;min-width:140px;padding:8px 10px;
+    background:var(--card);border:1px solid var(--border);border-left:2px solid var(--orange);
+    border-radius:4px}
+  #mce_summary > div .lbl{font-size:9px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  #mce_summary > div .val{font-size:14px;font-weight:800;margin-top:2px}
+
   /* ===== Toggle "Brasil sem export & intercompany" — versão mini no header ===== */
   .br-only-toggle-mini{margin-left:12px;padding:6px 12px;
     background:rgba(255,255,255,.06);
@@ -883,6 +897,8 @@
             <th data-k="uf">UF</th>
             <th data-k="cnt" class="num">Pedidos</th>
             <th data-k="val" class="num">Faturamento</th>
+            <th data-k="pct" class="num">%</th>
+            <th>Evolução</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -890,7 +906,39 @@
     </div>
     <div class="modal-foot">
       <span id="mc_summary">—</span>
-      <span>Clique em um cliente para filtrar o dashboard</span>
+      <span>Clique em um cliente para filtrar · "📊" para evolução mensal</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Evolução Mensal do Cliente ===== -->
+<div class="modal-backdrop" id="modal_client_evol">
+  <div class="modal-box" role="dialog" aria-label="Evolução do cliente" style="width:min(1100px,95vw)">
+    <div class="modal-head">
+      <h3 id="mce_title">Evolução Mensal</h3>
+      <button type="button" class="modal-close" data-modal-close="modal_client_evol" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="mce_summary" style="display:flex;gap:14px;flex-wrap:wrap;
+        margin-bottom:12px;padding:10px;background:var(--bg-alt);
+        border-radius:6px;font-size:11px"></div>
+      <table class="modal-table" id="mce_table">
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th class="num">Pedidos</th>
+            <th class="num">Faturamento</th>
+            <th class="num">vs Mês anterior</th>
+            <th class="num">Mesmo mês ano anterior</th>
+            <th class="num">vs Ano anterior</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      <span id="mce_total">—</span>
+      <span>Histórico completo do cliente (independente de filtros de período)</span>
     </div>
   </div>
 </div>
@@ -2618,6 +2666,86 @@ function closeModal(id) {
 const _mcSort = { k: 'val', dir: -1 };
 let _mcRowsCache = [];
 
+// === Evolução mensal de um cliente: MoM + YoY ===
+function openClientEvolution(cliIdx) {
+  const cli = CLIENT_BY_IDX[cliIdx] || ['','',''];
+  document.getElementById('mce_title').innerHTML =
+    'Evolução Mensal — <span style="color:var(--orange)">' + escHtml(cli[1]||'—') + '</span>'
+    + ' <span style="color:var(--muted);font-size:11px;font-weight:400">' + escHtml(cli[0]||'') + '</span>';
+
+  // Coleta TODAS as linhas desse cliente (independente de filtros) — drill total
+  // Agrega por ano-mês (YYYYMM)
+  const porYM = {};
+  let totVal = 0, totCnt = 0;
+  const setNFs = new Set();
+  for (const r of DATA.orders) {
+    if (r[C.cl] !== cliIdx) continue;
+    if (r[C.tr] === 1) continue;  // ignora devoluções
+    const ym = r[C.ano] * 100 + r[C.mes];
+    if (!porYM[ym]) porYM[ym] = { val: 0, nfs: new Set() };
+    porYM[ym].val += r[C.val];
+    porYM[ym].nfs.add(r[C.nf]);
+    totVal += r[C.val];
+    setNFs.add(r[C.nf]);
+  }
+
+  // Lista ordenada de meses (do mais recente ao mais antigo)
+  const yms = Object.keys(porYM).map(Number).sort(function(a,b){return b-a;});
+
+  // Resumo no topo
+  const mesesAtivos = yms.length;
+  const ticketMedio = totCnt > 0 ? (totVal / totCnt) : 0;
+  const ultimoYM = yms[0], ultimoMes = ultimoYM ? porYM[ultimoYM].val : 0;
+  const yMS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  document.getElementById('mce_summary').innerHTML =
+    '<div><div class="lbl">Faturamento Total</div><div class="val">' + fmtMoneyShort(totVal) + '</div></div>'
+    + '<div><div class="lbl">Pedidos (NFs)</div><div class="val">' + fmtInt(setNFs.size) + '</div></div>'
+    + '<div><div class="lbl">Meses Ativos</div><div class="val">' + mesesAtivos + '</div></div>'
+    + '<div><div class="lbl">Ticket Médio (NF)</div><div class="val">' + fmtMoneyShort(setNFs.size > 0 ? totVal/setNFs.size : 0) + '</div></div>'
+    + (ultimoYM ? '<div><div class="lbl">Último Mês</div><div class="val">' + yMS[(ultimoYM%100)-1] + '/' + Math.floor(ultimoYM/100) + ' · ' + fmtMoneyShort(ultimoMes) + '</div></div>' : '');
+
+  // Helper delta
+  function deltaFmt(curr, prev) {
+    if (prev === 0 || prev === undefined || prev === null) {
+      if (curr > 0) return '<span class="delta up">+ NOVO</span>';
+      return '<span class="delta flat">—</span>';
+    }
+    const pct = (curr - prev) / Math.abs(prev) * 100;
+    const cls = pct > 1 ? 'up' : (pct < -1 ? 'down' : 'flat');
+    const arrow = pct > 1 ? '↑' : (pct < -1 ? '↓' : '•');
+    const sign = pct >= 0 ? '+' : '';
+    return '<span class="delta ' + cls + '">' + arrow + ' ' + sign + pct.toFixed(1).replace('.',',') + '%</span>';
+  }
+  function ymPrev(ym) { const y=Math.floor(ym/100), m=ym%100; return m===1 ? (y-1)*100+12 : y*100+(m-1); }
+  function ymYearAgo(ym) { return ym - 100; }
+
+  const tbody = document.querySelector('#mce_table tbody');
+  if (!yms.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Sem histórico para este cliente.</td></tr>';
+  } else {
+    tbody.innerHTML = yms.map(function(ym) {
+      const valor = porYM[ym].val;
+      const cnt = porYM[ym].nfs.size;
+      const ymM = ymPrev(ym);
+      const valM = porYM[ymM] ? porYM[ymM].val : 0;
+      const ymY = ymYearAgo(ym);
+      const valY = porYM[ymY] ? porYM[ymY].val : 0;
+      const m = ym % 100, y = Math.floor(ym / 100);
+      return '<tr>'
+        + '<td><strong>' + yMS[m-1] + '/' + y + '</strong></td>'
+        + '<td class="num">' + fmtInt(cnt) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(valor) + '</td>'
+        + '<td class="num">' + (valM > 0 ? fmtMoneyShort(valM) + ' &nbsp;' : '<span style="color:var(--muted)">— &nbsp;</span>') + deltaFmt(valor, valM) + '</td>'
+        + '<td class="num">' + (valY > 0 ? fmtMoneyShort(valY) : '<span style="color:var(--muted)">—</span>') + '</td>'
+        + '<td class="num">' + deltaFmt(valor, valY) + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+  document.getElementById('mce_total').textContent =
+    yms.length + ' meses · Total ' + fmtMoneyShort(totVal);
+  openModal('modal_client_evol');
+}
+
 function openClientsModal() {
   const rows = filtered();
   const map = {};
@@ -2639,6 +2767,9 @@ function openClientsModal() {
 function renderClientsModal() {
   const q = (document.getElementById('mc_search').value || '').toLowerCase().trim();
   let arr = _mcRowsCache;
+  // Soma TOTAL do recorte (sempre — antes do filtro de busca textual)
+  let totalRecorte = 0;
+  for (const x of _mcRowsCache) totalRecorte += x.val;
   if (q) {
     arr = arr.filter(function(x) {
       const c = x.cli;
@@ -2655,29 +2786,46 @@ function renderClientsModal() {
     else if (k === 'fant') { av = a.cli[2]||''; bv = b.cli[2]||''; }
     else if (k === 'uf')   { av = Array.from(a.ufs).join(','); bv = Array.from(b.ufs).join(','); }
     else if (k === 'cnt')  { av = a.cnt; bv = b.cnt; }
+    else if (k === 'pct')  { av = a.val; bv = b.val; }
     else { av = a.val; bv = b.val; }
     if (typeof av === 'string') return dir * av.localeCompare(bv);
     return dir * (av - bv);
   });
   const tbody = document.querySelector('#mc_table tbody');
   if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum cliente neste recorte.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum cliente neste recorte.</td></tr>';
   } else {
     tbody.innerHTML = arr.map(function(x) {
       const c = x.cli;
-      return '<tr data-cd="' + escHtml(c[0]||'') + '" data-nome="' + escHtml(c[1]||'') + '">'
+      const pct = totalRecorte > 0 ? (x.val / totalRecorte * 100) : 0;
+      // Destaque visual para % alto (concentração de risco)
+      let pctColor = 'var(--text-soft)';
+      if (pct >= 5) pctColor = '#ef4444';     // vermelho — alta dependência
+      else if (pct >= 2) pctColor = '#f59e0b'; // âmbar — moderada
+      else if (pct >= 1) pctColor = '#10b981'; // verde — saudável
+      return '<tr data-cd="' + escHtml(c[0]||'') + '" data-nome="' + escHtml(c[1]||'') + '" data-cli-idx="' + x.i + '">'
         + '<td>' + escHtml(c[0]||'') + '</td>'
         + '<td>' + escHtml(c[1]||'-') + '</td>'
         + '<td>' + escHtml(c[2]||'') + '</td>'
         + '<td>' + escHtml(Array.from(x.ufs).sort().join(', ')) + '</td>'
         + '<td class="num">' + fmtInt(x.cnt) + '</td>'
         + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+        + '<td class="num"><strong style="color:' + pctColor + '">' + pct.toFixed(2).replace('.',',') + '%</strong></td>'
+        + '<td><button class="btn-evol" data-cli-idx="' + x.i + '" title="Evolução mensal">📊</button></td>'
         + '</tr>';
     }).join('');
     tbody.querySelectorAll('tr').forEach(function(tr) {
-      tr.onclick = function() {
+      tr.onclick = function(ev) {
+        // Click em "📊" abre evolução; click no resto da linha aplica filtro
+        if (ev.target.closest('.btn-evol')) return;
         applyClientFilter(tr.dataset.cd, tr.dataset.nome);
         closeModal('modal_clients');
+      };
+    });
+    tbody.querySelectorAll('.btn-evol').forEach(function(b) {
+      b.onclick = function(ev) {
+        ev.stopPropagation();
+        openClientEvolution(+b.dataset.cliIdx);
       };
     });
   }
@@ -3227,186 +3375,4 @@ function init() {
       if (_mcSort.k === k) _mcSort.dir *= -1;
       else { _mcSort.k = k; _mcSort.dir = (k === 'cd' || k === 'nome' || k === 'fant' || k === 'uf') ? 1 : -1; }
       renderClientsModal();
-    };
-  });
-  const mcaSearch = document.getElementById('mca_search');
-  if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
-
-  // Fechar modais
-  document.querySelectorAll('[data-modal-close]').forEach(function(b) {
-    b.onclick = function() { closeModal(b.dataset.modalClose); };
-  });
-  document.querySelectorAll('.modal-backdrop').forEach(function(bd) {
-    bd.addEventListener('click', function(e) {
-      if (e.target === bd) closeModal(bd.id);
-    });
-  });
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      document.querySelectorAll('.modal-backdrop.open').forEach(function(m) { closeModal(m.id); });
-    }
-  });
-
-  // ===== Calendário =====
-  document.getElementById('range_trigger').onclick = toggleCalendar;
-  document.getElementById('rp_prev').onclick  = () => navCalendar(-1);
-  document.getElementById('rp_next').onclick  = () => navCalendar(1);
-  document.getElementById('rp_title').onclick = zoomOutCalendar;
-  document.getElementById('rp_cancel').onclick = closeCalendar;
-  // Inputs manuais de data
-  function applyDateInputChange() {
-    const fromInp = document.getElementById('rp_from_input');
-    const toInp = document.getElementById('rp_to_input');
-    const f = isoToYMD(fromInp.value);
-    const t = isoToYMD(toInp.value);
-    if (f) {
-      const minN = ymdNum({y:DATA_RANGE.minY,m:DATA_RANGE.minM,d:DATA_RANGE.minD});
-      const maxN = ymdNum({y:DATA_RANGE.maxY,m:DATA_RANGE.maxM,d:DATA_RANGE.maxD});
-      const fN = ymdNum(f);
-      if (fN >= minN && fN <= maxN) {
-        CAL.pendingFrom = f;
-        if (CAL.pendingTo && ymdNum(CAL.pendingTo) < fN) CAL.pendingTo = null;
-        CAL.viewY = f.y; CAL.viewM = f.m;
-      }
-    } else if (fromInp.value === '') {
-      CAL.pendingFrom = null;
-    }
-    if (t) {
-      const minN = ymdNum({y:DATA_RANGE.minY,m:DATA_RANGE.minM,d:DATA_RANGE.minD});
-      const maxN = ymdNum({y:DATA_RANGE.maxY,m:DATA_RANGE.maxM,d:DATA_RANGE.maxD});
-      const tN = ymdNum(t);
-      if (tN >= minN && tN <= maxN) {
-        if (!CAL.pendingFrom || ymdNum(CAL.pendingFrom) <= tN) {
-          CAL.pendingTo = t;
-        }
-      }
-    } else if (toInp.value === '') {
-      CAL.pendingTo = null;
-    }
-    CAL.picking = CAL.pendingFrom && !CAL.pendingTo ? 'to' : 'from';
-    renderCalendar();
-    updateApplyBtn();
-  }
-  const rpFromInp = document.getElementById('rp_from_input');
-  const rpToInp = document.getElementById('rp_to_input');
-  if (rpFromInp) rpFromInp.onchange = applyDateInputChange;
-  if (rpToInp) rpToInp.onchange = applyDateInputChange;
-
-  document.getElementById('rp_apply').onclick = () => {
-    if (!CAL.pendingFrom) return;
-    if (!CAL.pendingTo) CAL.pendingTo = {...CAL.pendingFrom};
-    state.rangeFrom = {...CAL.pendingFrom};
-    state.rangeTo   = {...CAL.pendingTo};
-    state.compareYoY = CAL.pendingCompareYoY;
-    state.quickRange = 'custom';
-    closeCalendar();
-    syncRangeSelects();
-    renderAll();
-  };
-  // Reposiciona o popover se a janela redimensionar
-  window.addEventListener('resize', () => {
-    if (document.getElementById('range_popover').classList.contains('open')) positionPopover();
-  });
-
-  // Botões de quick range (YTD / 3m / 6m / 12m / Tudo)
-  document.querySelectorAll('#quick_ranges button').forEach(b => {
-    b.onclick = () => {
-      applyQuickRange(b.dataset.q);
-      syncRangeSelects();
-      renderAll();
-    };
-  });
-
-  // Toggle YoY (dentro do popover; padrão pendente: só aplica no botão "Aplicar")
-  document.getElementById('f_compare_yoy').onchange = e => {
-    CAL.pendingCompareYoY = e.target.checked;
-    updateCompareInfo();
-  };
-
-  document.getElementById('btn_reset').onclick=()=>{
-    state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
-    state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
-    state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
-    state.compareYoY=false; state.brOnly=false;
-    applyBrOnlyToggle();
-    applyQuickRange('12m');
-    document.getElementById('f_nome').value=''; document.getElementById('f_cd').value='';
-    document.getElementById('f_excl_padrao').checked=false;
-    document.getElementById('f_incl_dev').checked=true;
-    document.getElementById('f_prod_search').value='';
-    document.getElementById('f_compare_yoy').checked=false;
-    CAL.pendingCompareYoY = false;
-    syncCdMatch();
-    renderFilters(); renderAll();
-  };
-  document.querySelectorAll('#map_metric button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#map_metric button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.mapMetric=b.dataset.m; renderAll();};
-  });
-  document.querySelectorAll('#map_agg button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#map_agg button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.mapAgg=b.dataset.a; renderAll();};
-  });
-  document.querySelectorAll('#metric_scope button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#metric_scope button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderAll();};
-  });
-  document.querySelectorAll('#table_detail th[data-k]').forEach(th=>{
-    th.onclick=()=>{const k=th.dataset.k;
-      if(state.tableSort.k===k)state.tableSort.dir*=-1; else {state.tableSort.k=k; state.tableSort.dir=-1;}
-      renderTable(lastRows);};
-  });
-  document.getElementById('btn_more').onclick=()=>{state.tableLimit+=500; renderTable(lastRows);};
-  document.getElementById('btn_csv').onclick=()=>{
-    const head=['Data','Tipo','NF','Cod_Cliente','Cliente','UF','Tabela','Vendedor','Qtd','Valor'];
-    const lines=[head.join(';')];
-    for(const r of lastRows){
-      const cli=CLIENT_BY_IDX[r[C.cl]]||['','',''];
-      lines.push([fmtDate(r[C.data]), r[C.tr]===1?'DEVOLUCAO':'VENDA', r[C.nf], cli[0],
-        '"'+(cli[1]||'').replace(/"/g,'""')+'"', DATA.ufs[r[C.uf]]||'',
-        r[C.tb]>=0?DATA.tabelas[r[C.tb]]:'', r[C.vd]>=0?DATA.vendedores[r[C.vd]]:'',
-        Math.round(r[C.qtd]),r[C.val].toFixed(2).replace('.',',')].join(';'));
-    }
-    const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='pedidos_fueltech.csv'; a.click();
-  };
-
-  // Inicializa o auto-match Cd -> Nome com o estado atual
-  syncCdMatch();
-  // Sincroniza UI do toggle Brasil-only
-  applyBrOnlyToggle();
-
-  // Theme toggle
-  const root = document.documentElement;
-  try {
-    const saved = localStorage.getItem('fueltech_theme');
-    if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
-  } catch(e){}
-  document.getElementById('theme_toggle').onclick = () => {
-    const cur = root.getAttribute('data-theme') || 'dark';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    try { localStorage.setItem('fueltech_theme', next); } catch(e){}
-    applyChartTheme();
-    Object.values(charts).forEach(c => c && c.destroy && c.destroy());
-    charts = {};
-    renderAll();
-  };
-}
-setTimeout(init,30);
-</script>
-
-
-<script>
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const o = document.getElementById('loading-overlay');
-    if (o) { o.style.transition='opacity 0.3s'; o.style.opacity='0'; }
-    setTimeout(() => { if (o) o.remove(); }, 300);
-  }, 100);
-});
-</script>
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    

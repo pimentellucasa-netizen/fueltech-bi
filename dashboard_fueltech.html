@@ -906,6 +906,8 @@
             <th data-k="cnt" class="num">Pedidos</th>
             <th data-k="val" class="num">Faturamento</th>
             <th data-k="pct" class="num">%</th>
+            <th data-k="mom" class="num" id="mc_th_mom">MoM</th>
+            <th data-k="yoy" class="num" id="mc_th_yoy">YoY</th>
             <th>Evolução</th>
           </tr>
         </thead>
@@ -914,7 +916,7 @@
     </div>
     <div class="modal-foot">
       <span id="mc_summary">—</span>
-      <span>Clique em um cliente para filtrar · "📊" para evolução mensal</span>
+      <span id="mc_period_info" style="font-size:10px;color:var(--muted);font-style:italic"></span>
     </div>
   </div>
 </div>
@@ -2844,13 +2846,66 @@ function openClientsModal() {
   const map = {};
   for (const r of rows) {
     const i = r[C.cl];
-    if (!map[i]) map[i] = { i, cli: CLIENT_BY_IDX[i] || ['','',''], val: 0, cnt: 0, ufs: new Set() };
+    if (!map[i]) map[i] = { i, cli: CLIENT_BY_IDX[i] || ['','',''], val: 0, cnt: 0, ufs: new Set(),
+      valM_curr:0, valM_prev:0, valM_yoy:0 };
     map[i].val += r[C.val];
     if (r[C.tr] !== 1) map[i].cnt++;
     const uf = DATA.ufs[r[C.uf]];
     if (uf) map[i].ufs.add(uf);
   }
+
+  // === Calcula MoM e YoY ===
+  // M\u00eas atual = \u00faltimo m\u00eas do recorte (state.rangeTo) ou max do dataset
+  const refY = state.rangeTo ? state.rangeTo.y : DATA_RANGE.maxY;
+  const refM = state.rangeTo ? state.rangeTo.m : DATA_RANGE.maxM;
+  const currentYM = refY * 100 + refM;
+  const prevYM = refM === 1 ? (refY - 1) * 100 + 12 : refY * 100 + (refM - 1);
+  const yoyYM = (refY - 1) * 100 + refM;
+
+  // Percorre TODAS as linhas (independente do filtro de per\u00edodo) aplicando os outros filtros
+  for (const r of DATA.orders) {
+    if (!state.incluirDev && r[C.tr] === 1) continue;
+    const ufStr = DATA.ufs[r[C.uf]];
+    if (state.ufs.size && !state.ufs.has(ufStr)) continue;
+    if (state.tabelas.size && !state.tabelas.has(r[C.tb])) continue;
+    if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) continue;
+    const cli = CLIENT_BY_IDX[r[C.cl]];
+    if (state.excluirPadrao && cli && cli[1] === 'CLIENTE PADRAO') continue;
+    if (state.brOnly) {
+      if (ufStr === 'EX') continue;
+      if (cli && INTERCOMPANY_CDS.has(cli[0])) continue;
+    }
+    if (state.produtos.size) {
+      let ok = false;
+      for (const [pi] of r[C.pr]) if (state.produtos.has(pi)) { ok = true; break; }
+      if (!ok) continue;
+    }
+    const ym = r[C.ano] * 100 + r[C.mes];
+    if (ym !== currentYM && ym !== prevYM && ym !== yoyYM) continue;
+    const i = r[C.cl];
+    if (!map[i]) {
+      map[i] = { i, cli: CLIENT_BY_IDX[i] || ['','',''], val: 0, cnt: 0, ufs: new Set(),
+        valM_curr: 0, valM_prev: 0, valM_yoy: 0 };
+    }
+    if (ym === currentYM) map[i].valM_curr += r[C.val];
+    else if (ym === prevYM) map[i].valM_prev += r[C.val];
+    else if (ym === yoyYM) map[i].valM_yoy += r[C.val];
+  }
+
   _mcRowsCache = Object.values(map);
+
+  // Atualiza headers e info textual com os meses comparados
+  const MS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const lblCurr = MS[refM-1] + '/' + refY;
+  const lblPrev = MS[(prevYM%100)-1] + '/' + Math.floor(prevYM/100);
+  const lblYoy = MS[(yoyYM%100)-1] + '/' + Math.floor(yoyYM/100);
+  const thMom = document.getElementById('mc_th_mom');
+  const thYoy = document.getElementById('mc_th_yoy');
+  if (thMom) thMom.title = lblCurr + ' vs ' + lblPrev + ' (m\u00eas anterior)';
+  if (thYoy) thYoy.title = lblCurr + ' vs ' + lblYoy + ' (mesmo m\u00eas ano anterior)';
+  const periodInfo = document.getElementById('mc_period_info');
+  if (periodInfo) periodInfo.textContent = 'MoM: ' + lblCurr + ' vs ' + lblPrev + ' \u00b7 YoY: ' + lblCurr + ' vs ' + lblYoy;
+
   document.getElementById('mc_search').value = '';
   document.getElementById('mc_badge').textContent = '\u00b7 ' + _mcRowsCache.length + ' cliente(s) no recorte';
   renderClientsModal();
@@ -2871,6 +2926,23 @@ function renderClientsModal() {
              (c[2]||'').toLowerCase().indexOf(q) >= 0;
     });
   }
+  // Helper para calcular variação % e formato celular
+  function cellDelta(curr, prev) {
+    if (prev === 0 || prev === undefined || prev === null) {
+      if (curr > 0) return '<span class="delta up">+ NOVO</span>';
+      if (curr === 0) return '<span style="color:var(--muted)">—</span>';
+      return '<span style="color:var(--muted)">—</span>';
+    }
+    if (curr === 0 && prev !== 0) {
+      return '<span class="delta down">↓ −100%</span>';
+    }
+    const pct = (curr - prev) / Math.abs(prev) * 100;
+    const cls = pct > 1 ? 'up' : (pct < -1 ? 'down' : 'flat');
+    const arrow = pct > 1 ? '↑' : (pct < -1 ? '↓' : '•');
+    const sign = pct >= 0 ? '+' : '';
+    return '<span class="delta ' + cls + '" title="atual ' + fmtMoneyShort(curr) + ' · anterior ' + fmtMoneyShort(prev) + '">' + arrow + ' ' + sign + pct.toFixed(1).replace('.',',') + '%</span>';
+  }
+
   const k = _mcSort.k, dir = _mcSort.dir;
   arr = arr.slice().sort(function(a,b) {
     let av, bv;
@@ -2880,22 +2952,30 @@ function renderClientsModal() {
     else if (k === 'uf')   { av = Array.from(a.ufs).join(','); bv = Array.from(b.ufs).join(','); }
     else if (k === 'cnt')  { av = a.cnt; bv = b.cnt; }
     else if (k === 'pct')  { av = a.val; bv = b.val; }
+    else if (k === 'mom')  {
+      // Ordena por % MoM
+      av = (a.valM_prev > 0) ? (a.valM_curr - a.valM_prev) / a.valM_prev : (a.valM_curr > 0 ? Infinity : 0);
+      bv = (b.valM_prev > 0) ? (b.valM_curr - b.valM_prev) / b.valM_prev : (b.valM_curr > 0 ? Infinity : 0);
+    }
+    else if (k === 'yoy')  {
+      av = (a.valM_yoy > 0) ? (a.valM_curr - a.valM_yoy) / a.valM_yoy : (a.valM_curr > 0 ? Infinity : 0);
+      bv = (b.valM_yoy > 0) ? (b.valM_curr - b.valM_yoy) / b.valM_yoy : (b.valM_curr > 0 ? Infinity : 0);
+    }
     else { av = a.val; bv = b.val; }
     if (typeof av === 'string') return dir * av.localeCompare(bv);
     return dir * (av - bv);
   });
   const tbody = document.querySelector('#mc_table tbody');
   if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum cliente neste recorte.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="empty">Nenhum cliente neste recorte.</td></tr>';
   } else {
     tbody.innerHTML = arr.map(function(x) {
       const c = x.cli;
       const pct = totalRecorte > 0 ? (x.val / totalRecorte * 100) : 0;
-      // Destaque visual para % alto (concentração de risco)
       let pctColor = 'var(--text-soft)';
-      if (pct >= 5) pctColor = '#ef4444';     // vermelho — alta dependência
-      else if (pct >= 2) pctColor = '#f59e0b'; // âmbar — moderada
-      else if (pct >= 1) pctColor = '#10b981'; // verde — saudável
+      if (pct >= 5) pctColor = '#ef4444';
+      else if (pct >= 2) pctColor = '#f59e0b';
+      else if (pct >= 1) pctColor = '#10b981';
       return '<tr data-cd="' + escHtml(c[0]||'') + '" data-nome="' + escHtml(c[1]||'') + '" data-cli-idx="' + x.i + '">'
         + '<td>' + escHtml(c[0]||'') + '</td>'
         + '<td>' + escHtml(c[1]||'-') + '</td>'
@@ -2904,6 +2984,8 @@ function renderClientsModal() {
         + '<td class="num">' + fmtInt(x.cnt) + '</td>'
         + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
         + '<td class="num"><strong style="color:' + pctColor + '">' + pct.toFixed(2).replace('.',',') + '%</strong></td>'
+        + '<td class="num">' + cellDelta(x.valM_curr || 0, x.valM_prev || 0) + '</td>'
+        + '<td class="num">' + cellDelta(x.valM_curr || 0, x.valM_yoy || 0) + '</td>'
         + '<td><button class="btn-evol" data-cli-idx="' + x.i + '" title="Evolução mensal">📊</button></td>'
         + '</tr>';
     }).join('');
@@ -3571,87 +3653,4 @@ function init() {
   document.getElementById('btn_reset').onclick=()=>{
     state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
     state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
-    state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
-    state.compareYoY=false; state.brOnly=false;
-    applyBrOnlyToggle();
-    applyQuickRange('12m');
-    document.getElementById('f_nome').value=''; document.getElementById('f_cd').value='';
-    document.getElementById('f_excl_padrao').checked=false;
-    document.getElementById('f_incl_dev').checked=true;
-    document.getElementById('f_prod_search').value='';
-    document.getElementById('f_compare_yoy').checked=false;
-    CAL.pendingCompareYoY = false;
-    syncCdMatch();
-    renderFilters(); renderAll();
-  };
-  document.querySelectorAll('#map_metric button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#map_metric button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.mapMetric=b.dataset.m; renderAll();};
-  });
-  document.querySelectorAll('#map_agg button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#map_agg button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.mapAgg=b.dataset.a; renderAll();};
-  });
-  document.querySelectorAll('#metric_scope button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#metric_scope button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderAll();};
-  });
-  document.querySelectorAll('#table_detail th[data-k]').forEach(th=>{
-    th.onclick=()=>{const k=th.dataset.k;
-      if(state.tableSort.k===k)state.tableSort.dir*=-1; else {state.tableSort.k=k; state.tableSort.dir=-1;}
-      renderTable(lastRows);};
-  });
-  document.getElementById('btn_more').onclick=()=>{state.tableLimit+=500; renderTable(lastRows);};
-  document.getElementById('btn_csv').onclick=()=>{
-    const head=['Data','Tipo','NF','Cod_Cliente','Cliente','UF','Tabela','Vendedor','Qtd','Valor'];
-    const lines=[head.join(';')];
-    for(const r of lastRows){
-      const cli=CLIENT_BY_IDX[r[C.cl]]||['','',''];
-      lines.push([fmtDate(r[C.data]), r[C.tr]===1?'DEVOLUCAO':'VENDA', r[C.nf], cli[0],
-        '"'+(cli[1]||'').replace(/"/g,'""')+'"', DATA.ufs[r[C.uf]]||'',
-        r[C.tb]>=0?DATA.tabelas[r[C.tb]]:'', r[C.vd]>=0?DATA.vendedores[r[C.vd]]:'',
-        Math.round(r[C.qtd]),r[C.val].toFixed(2).replace('.',',')].join(';'));
-    }
-    const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='pedidos_fueltech.csv'; a.click();
-  };
-
-  // Inicializa o auto-match Cd -> Nome com o estado atual
-  syncCdMatch();
-  // Sincroniza UI do toggle Brasil-only
-  applyBrOnlyToggle();
-
-  // Theme toggle
-  const root = document.documentElement;
-  try {
-    const saved = localStorage.getItem('fueltech_theme');
-    if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
-  } catch(e){}
-  document.getElementById('theme_toggle').onclick = () => {
-    const cur = root.getAttribute('data-theme') || 'dark';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    try { localStorage.setItem('fueltech_theme', next); } catch(e){}
-    applyChartTheme();
-    Object.values(charts).forEach(c => c && c.destroy && c.destroy());
-    charts = {};
-    renderAll();
-  };
-}
-setTimeout(init,30);
-</script>
-
-
-<script>
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const o = document.getElementById('loading-overlay');
-    if (o) { o.style.transition='opacity 0.3s'; o.style.opacity='0'; }
-    setTimeout(() => { if (o) o.remove(); }, 300);
-  }, 100);
-});
-</script>
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    state.excluirPadrao=false; state.incluirDev=true; state.

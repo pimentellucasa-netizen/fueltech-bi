@@ -442,7 +442,13 @@
       <div class="modal-letter-nav" id="mca_letters"></div>
       <table class="modal-table" id="mca_table">
         <thead>
-          <tr><th>Código</th><th>Nome</th><th>Fantasia</th></tr>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>País(es)</th>
+            <th class="num">Pedidos</th>
+            <th class="num">Faturamento</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -1284,14 +1290,33 @@ function renderAll() {
 let _mcaCache = null;
 let _mcaActiveLetter = null;
 function buildClientsAZCache() {
+  // Apenas clientes com pelo menos 1 pedido EXPORT para país LATAM
+  // Coleta também faturamento e país(es) por cliente para mostrar no modal
+  const stats = {};  // cliIdx -> { val, cnt, paises:Set }
+  for (let i = 0; i < DATA.orders.length; i++) {
+    const r = DATA.orders[i];
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    if (r[C.tr] === 1) continue;  // ignora devoluções
+    const pais = DATA.paises[r[C.pa]] || '';
+    if (!LATAM_SET.has(pais)) continue;
+    const ci = r[C.cl];
+    if (!stats[ci]) stats[ci] = { val:0, cnt:0, paises:new Set() };
+    stats[ci].val += r[C.val];
+    stats[ci].cnt++;
+    stats[ci].paises.add(pais);
+  }
   const arr = [];
-  for (let i = 0; i < DATA.clients.length; i++) {
-    const c = DATA.clients[i];
+  for (const ci in stats) {
+    const c = DATA.clients[ci];
     if (!c) continue;
     const nome = (c[1]||'').trim();
     const letter = nome ? nome.charAt(0).toUpperCase() : '#';
-    arr.push({ idx:i, cd:c[0]||'', nome:nome, fant:c[2]||'',
-      letter: /[A-Z]/.test(letter) ? letter : '#' });
+    arr.push({
+      idx: +ci, cd: c[0]||'', nome: nome, fant: c[2]||'',
+      letter: /[A-Z]/.test(letter) ? letter : '#',
+      val: stats[ci].val, cnt: stats[ci].cnt,
+      paises: Array.from(stats[ci].paises).sort().join(', ')
+    });
   }
   arr.sort(function(a,b){
     return (a.nome||'').localeCompare(b.nome||'') || (a.cd||'').localeCompare(b.cd||'');
@@ -1299,8 +1324,9 @@ function buildClientsAZCache() {
   return arr;
 }
 function openClientsAZModal() {
-  if (!_mcaCache) _mcaCache = buildClientsAZCache();
-  document.getElementById('mca_count').textContent = '· ' + fmtInt(_mcaCache.length) + ' clientes cadastrados';
+  // Sempre rebuild — pra atualizar se filtros mudarem (na verdade aqui não filtramos por período)
+  _mcaCache = buildClientsAZCache();
+  document.getElementById('mca_count').textContent = '· ' + fmtInt(_mcaCache.length) + ' clientes LATAM';
   document.getElementById('mca_search').value = '';
   _mcaActiveLetter = null;
   const letterSet = {};
@@ -1337,13 +1363,17 @@ function renderClientsAZ() {
   const view = truncated ? arr.slice(0, 500) : arr;
   const tbody = document.querySelector('#mca_table tbody');
   if (!view.length) {
-    tbody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--muted)">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">Nenhum cliente encontrado.</td></tr>';
   } else {
     tbody.innerHTML = view.map(function(x){
       return '<tr data-cd="' + escHtml(x.cd) + '" data-nome="' + escHtml(x.nome) + '">'
         + '<td>' + escHtml(x.cd) + '</td>'
-        + '<td>' + escHtml(x.nome||'—') + '</td>'
-        + '<td>' + escHtml(x.fant) + '</td>'
+        + '<td><strong>' + escHtml(x.nome||'—') + '</strong>'
+          + (x.fant && x.fant !== x.nome ? ' <span style="color:var(--muted);font-size:10px">' + escHtml(x.fant) + '</span>' : '')
+          + '</td>'
+        + '<td><span style="font-size:11px">' + escHtml(x.paises||'—') + '</span></td>'
+        + '<td class="num">' + fmtInt(x.cnt||0) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(x.val||0) + '</td>'
         + '</tr>';
     }).join('');
     tbody.querySelectorAll('tr').forEach(function(tr){
@@ -1483,46 +1513,3 @@ function init() {
   document.querySelectorAll('#timeline_mode button').forEach(function(b) {
     b.onclick = function() {
       document.querySelectorAll('#timeline_mode button').forEach(function(x){x.classList.remove('active');});
-      b.classList.add('active');
-      state.timelineMode = b.dataset.m;
-      const t = document.getElementById('timeline_title');
-      if (t) t.textContent = state.timelineMode === 'yoy' ? 'Faturamento — Comparativo Anual' : 'Faturamento por Mês';
-      renderAll();
-    };
-  });
-
-  // Lista alfabética
-  const btnAZ = document.getElementById('btn_open_clients_az');
-  if (btnAZ) btnAZ.onclick = openClientsAZModal;
-  const mcaSearch = document.getElementById('mca_search');
-  if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
-  // Fecha modal com clique no backdrop ou ESC
-  document.getElementById('modal_clients_az').addEventListener('click', function(e){
-    if (e.target.id === 'modal_clients_az') {
-      this.classList.remove('open');
-      document.body.style.overflow = '';
-    }
-  });
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') {
-      const m = document.getElementById('modal_clients_az');
-      if (m && m.classList.contains('open')) {
-        m.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    }
-  });
-
-  buildMap();
-  setupMapTooltip();
-  renderAll();
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  setTimeout(init, 30);
-}
-</script>
-</body>
-</html>

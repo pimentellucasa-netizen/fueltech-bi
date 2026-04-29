@@ -597,6 +597,14 @@
     text-transform:uppercase;letter-spacing:.5px;font-weight:700}
   #mce_summary > div .val{font-size:14px;font-weight:800;margin-top:2px}
 
+  /* Tabs Tabela/Gráfico */
+  .mce-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+  .mce-tabs button{background:transparent;border:none;color:var(--muted);
+    padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;
+    font-family:inherit;border-bottom:2px solid transparent;transition:all .15s}
+  .mce-tabs button:hover{color:var(--text)}
+  .mce-tabs button.active{color:var(--orange);border-bottom-color:var(--orange)}
+
   /* ===== Toggle "Brasil sem export & intercompany" — versão mini no header ===== */
   .br-only-toggle-mini{margin-left:12px;padding:6px 12px;
     background:rgba(255,255,255,.06);
@@ -922,19 +930,38 @@
       <div id="mce_summary" style="display:flex;gap:14px;flex-wrap:wrap;
         margin-bottom:12px;padding:10px;background:var(--bg-alt);
         border-radius:6px;font-size:11px"></div>
-      <table class="modal-table" id="mce_table">
-        <thead>
-          <tr>
-            <th>Mês</th>
-            <th class="num">Pedidos</th>
-            <th class="num">Faturamento</th>
-            <th class="num">vs Mês anterior</th>
-            <th class="num">Mesmo mês ano anterior</th>
-            <th class="num">vs Ano anterior</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+
+      <!-- Tabs Tabela / Gráfico -->
+      <div class="mce-tabs" id="mce_tabs">
+        <button type="button" class="active" data-tab="table">📋 Tabela</button>
+        <button type="button" data-tab="chart">📊 Gráfico</button>
+      </div>
+
+      <!-- Tab: Tabela (default) -->
+      <div id="mce_tab_table">
+        <table class="modal-table" id="mce_table">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="num">Pedidos</th>
+              <th class="num">Faturamento</th>
+              <th class="num">vs Mês anterior</th>
+              <th class="num">Mesmo mês ano anterior</th>
+              <th class="num">vs Ano anterior</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Tab: Gráfico -->
+      <div id="mce_tab_chart" style="display:none">
+        <div style="height:380px;background:var(--bg-alt);border-radius:6px;padding:14px">
+          <canvas id="mce_chart"></canvas>
+        </div>
+        <div id="mce_chart_legend" style="margin-top:10px;font-size:11px;color:var(--muted);
+          display:flex;gap:14px;flex-wrap:wrap;justify-content:center"></div>
+      </div>
     </div>
     <div class="modal-foot">
       <span id="mce_total">—</span>
@@ -2743,7 +2770,94 @@ function openClientEvolution(cliIdx) {
   }
   document.getElementById('mce_total').textContent =
     yms.length + ' meses · Total ' + fmtMoneyShort(totVal);
+
+  // Armazena dados para o chart e prepara aba ativa
+  _mceChartData = porYM;
+  // Volta para aba Tabela quando abre
+  setMceTab('table');
+
   openModal('modal_client_evol');
+}
+
+// Estado do chart de evolução
+let _mceChartData = {};
+let _mceChartInst = null;
+
+function setMceTab(tab) {
+  document.querySelectorAll('#mce_tabs button').forEach(function(b){
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.getElementById('mce_tab_table').style.display = tab === 'table' ? '' : 'none';
+  document.getElementById('mce_tab_chart').style.display = tab === 'chart' ? '' : 'none';
+  if (tab === 'chart') renderClientEvolutionChart();
+}
+
+function renderClientEvolutionChart() {
+  const data = _mceChartData || {};
+  // Agrupa por ano → 12 valores mensais
+  const porAno = {};
+  for (const ym in data) {
+    const ano = Math.floor(+ym / 100);
+    const mes = +ym % 100;
+    if (!porAno[ano]) porAno[ano] = new Array(12).fill(null);
+    porAno[ano][mes-1] = data[ym].val;
+  }
+  const anos = Object.keys(porAno).map(Number).sort(function(a,b){return a-b;});
+  const cores = {
+    2023: '#9a9a9a', 2024: '#3498DB',
+    2025: '#1ABC9C', 2026: '#DC2626'
+  };
+  const datasets = anos.map(function(ano) {
+    const cor = cores[ano] || '#888';
+    const isCurrent = ano === Math.max.apply(null, anos);
+    return {
+      label: String(ano),
+      data: porAno[ano].map(function(v){ return v === null ? 0 : v; }),
+      borderColor: cor,
+      backgroundColor: cor + '20',
+      tension: 0.3,
+      borderWidth: isCurrent ? 3 : 2,
+      pointRadius: isCurrent ? 5 : 4,
+      pointHoverRadius: 7,
+      pointBackgroundColor: cor,
+      fill: false,
+      spanGaps: false
+    };
+  });
+  const MS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Legenda customizada (com cores dos anos)
+  const lg = document.getElementById('mce_chart_legend');
+  if (lg) {
+    lg.innerHTML = anos.map(function(ano){
+      const cor = cores[ano] || '#888';
+      return '<span style="display:inline-flex;align-items:center;gap:6px">'
+        + '<span style="width:14px;height:3px;background:' + cor + ';display:inline-block;border-radius:2px"></span>'
+        + '<strong style="color:var(--text)">' + ano + '</strong></span>';
+    }).join('');
+  }
+
+  if (_mceChartInst) { _mceChartInst.destroy(); _mceChartInst = null; }
+  _mceChartInst = new Chart(document.getElementById('mce_chart'), {
+    type: 'line',
+    data: { labels: MS, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(c) { return c.dataset.label + ': ' + fmtMoney(c.parsed.y); }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#222' }, ticks: { color: '#aaa', font: { size: 10 } } },
+        y: { grid: { color: '#222' },
+          ticks: { color: '#aaa', font: { size: 10 }, callback: function(v) { return fmtMoneyShort(v); } } }
+      }
+    }
+  });
 }
 
 function openClientsModal() {
@@ -3381,6 +3495,11 @@ function init() {
   if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
 
   // Fechar modais
+  // Tabs do modal de evolução do cliente
+  document.querySelectorAll('#mce_tabs button').forEach(function(b) {
+    b.onclick = function() { setMceTab(b.dataset.tab); };
+  });
+
   document.querySelectorAll('[data-modal-close]').forEach(function(b) {
     b.onclick = function() { closeModal(b.dataset.modalClose); };
   });
@@ -3468,93 +3587,4 @@ function init() {
   // Toggle YoY (dentro do popover; padrão pendente: só aplica no botão "Aplicar")
   document.getElementById('f_compare_yoy').onchange = e => {
     CAL.pendingCompareYoY = e.target.checked;
-    updateCompareInfo();
-  };
-
-  document.getElementById('btn_reset').onclick=()=>{
-    state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
-    state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
-    state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
-    state.compareYoY=false; state.brOnly=false;
-    applyBrOnlyToggle();
-    applyQuickRange('12m');
-    document.getElementById('f_nome').value=''; document.getElementById('f_cd').value='';
-    document.getElementById('f_excl_padrao').checked=false;
-    document.getElementById('f_incl_dev').checked=true;
-    document.getElementById('f_prod_search').value='';
-    document.getElementById('f_compare_yoy').checked=false;
-    CAL.pendingCompareYoY = false;
-    syncCdMatch();
-    renderFilters(); renderAll();
-  };
-  document.querySelectorAll('#map_metric button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#map_metric button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.mapMetric=b.dataset.m; renderAll();};
-  });
-  document.querySelectorAll('#map_agg button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#map_agg button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); state.mapAgg=b.dataset.a; renderAll();};
-  });
-  document.querySelectorAll('#metric_scope button').forEach(b=>{
-    b.onclick=()=>{document.querySelectorAll('#metric_scope button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderAll();};
-  });
-  document.querySelectorAll('#table_detail th[data-k]').forEach(th=>{
-    th.onclick=()=>{const k=th.dataset.k;
-      if(state.tableSort.k===k)state.tableSort.dir*=-1; else {state.tableSort.k=k; state.tableSort.dir=-1;}
-      renderTable(lastRows);};
-  });
-  document.getElementById('btn_more').onclick=()=>{state.tableLimit+=500; renderTable(lastRows);};
-  document.getElementById('btn_csv').onclick=()=>{
-    const head=['Data','Tipo','NF','Cod_Cliente','Cliente','UF','Tabela','Vendedor','Qtd','Valor'];
-    const lines=[head.join(';')];
-    for(const r of lastRows){
-      const cli=CLIENT_BY_IDX[r[C.cl]]||['','',''];
-      lines.push([fmtDate(r[C.data]), r[C.tr]===1?'DEVOLUCAO':'VENDA', r[C.nf], cli[0],
-        '"'+(cli[1]||'').replace(/"/g,'""')+'"', DATA.ufs[r[C.uf]]||'',
-        r[C.tb]>=0?DATA.tabelas[r[C.tb]]:'', r[C.vd]>=0?DATA.vendedores[r[C.vd]]:'',
-        Math.round(r[C.qtd]),r[C.val].toFixed(2).replace('.',',')].join(';'));
-    }
-    const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='pedidos_fueltech.csv'; a.click();
-  };
-
-  // Inicializa o auto-match Cd -> Nome com o estado atual
-  syncCdMatch();
-  // Sincroniza UI do toggle Brasil-only
-  applyBrOnlyToggle();
-
-  // Theme toggle
-  const root = document.documentElement;
-  try {
-    const saved = localStorage.getItem('fueltech_theme');
-    if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
-  } catch(e){}
-  document.getElementById('theme_toggle').onclick = () => {
-    const cur = root.getAttribute('data-theme') || 'dark';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    try { localStorage.setItem('fueltech_theme', next); } catch(e){}
-    applyChartTheme();
-    Object.values(charts).forEach(c => c && c.destroy && c.destroy());
-    charts = {};
-    renderAll();
-  };
-}
-setTimeout(init,30);
-</script>
-
-
-<script>
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    const o = document.getElementById('loading-overlay');
-    if (o) { o.style.transition='opacity 0.3s'; o.style.opacity='0'; }
-    setTimeout(() => { if (o) o.remove(); }, 300);
-  }, 100);
-});
-</script>
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    updateCompare

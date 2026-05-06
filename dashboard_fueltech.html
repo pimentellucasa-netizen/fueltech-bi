@@ -700,6 +700,10 @@
       <label>Tabela de Compra (Patrocínio / Cota)</label>
       <div id="f_tb" class="chips"></div>
     </div>
+    <div class="filter-group">
+      <label>Categoria de Produto</label>
+      <div id="f_grp" class="chips"></div>
+    </div>
     <div class="filter-group produto-search">
       <label>Produto (busca)</label>
       <input type="text" id="f_prod_search" placeholder="Digite para buscar produto..." autocomplete="off">
@@ -1051,7 +1055,7 @@ const state = {
   rangeFrom:null, rangeTo:null,
   quickRange:'all',   // 'ytd'|'3m'|'6m'|'12m'|'all'|'custom'
   ufs:new Set(),
-  tabelas:new Set(), produtos:new Set(),
+  tabelas:new Set(), produtos:new Set(), grupos:new Set(),
   vendedor:'',
   excluirPadrao:false, incluirDev:true,
   mapMetric:'val', mapAgg:'uf', tableLimit:500,
@@ -1244,6 +1248,14 @@ function matchRow(r) {
     let ok=false; for(const [pi] of r[C.pr]) if(state.produtos.has(pi)){ok=true;break;}
     if(!ok) return false;
   }
+  if (state.grupos.size && DATA.produto_grupo) {
+    let ok=false;
+    for(const [pi] of r[C.pr]) {
+      const g = DATA.produto_grupo[pi];
+      if (g !== undefined && state.grupos.has(g)) { ok=true; break; }
+    }
+    if(!ok) return false;
+  }
   return true;
 }
 function filtered() { return DATA.orders.filter(matchRow); }
@@ -1300,6 +1312,14 @@ function matchRowComp(r, comp) {
   }
   if (state.produtos.size) {
     let ok=false; for(const [pi] of r[C.pr]) if(state.produtos.has(pi)){ok=true;break;}
+    if(!ok) return false;
+  }
+  if (state.grupos.size && DATA.produto_grupo) {
+    let ok=false;
+    for(const [pi] of r[C.pr]) {
+      const g = DATA.produto_grupo[pi];
+      if (g !== undefined && state.grupos.has(g)) { ok=true; break; }
+    }
     if(!ok) return false;
   }
   return true;
@@ -2611,6 +2631,11 @@ function applyQuickRange(q) {
 function renderFilters() {
   document.getElementById('f_uf').innerHTML=DATA.ufs.map(u=>`<span class="chip ${state.ufs.has(u)?'active':''}" data-v="${u}">${u}</span>`).join('');
   document.getElementById('f_tb').innerHTML=DATA.tabelas.map((t,i)=>`<span class="chip ${state.tabelas.has(i)?'active':''}" data-v="${i}">${t}</span>`).join('');
+  if (DATA.grupos) {
+    document.getElementById('f_grp').innerHTML = DATA.grupos.map((g,i) =>
+      `<span class="chip ${state.grupos.has(i)?'active':''}" data-v="${i}" title="${g.replace(/"/g,'&quot;')}">${g.replace('PRODUTO INDUSTRIALIZADO - ','').replace('PRODUTO LICENCIADO - ','LIC ').replace('PRODUTO REVENDA - ','REV ').replace('PRODUTO INTERMEDIARIO - ','INT ').replace('MOTORSPORTS - ','MS ').substring(0,28)}</span>`
+    ).join('');
+  }
   const vd=document.getElementById('f_vd');
   if(vd.children.length<=1){ DATA.vendedores.forEach((v,i)=>{const o=document.createElement('option'); o.value=i; o.textContent=v; vd.appendChild(o);}); }
   vd.value=state.vendedor;
@@ -2628,6 +2653,7 @@ function renderFilters() {
   function bindChips(id,onToggle){ document.getElementById(id).querySelectorAll('.chip').forEach(c=>{c.onclick=()=>{onToggle(c.dataset.v); renderFilters(); renderAll();};}); }
   bindChips('f_uf', v=>{state.ufs.has(v)?state.ufs.delete(v):state.ufs.add(v);});
   bindChips('f_tb', v=>{v=+v; state.tabelas.has(v)?state.tabelas.delete(v):state.tabelas.add(v);});
+  bindChips('f_grp', v=>{v=+v; state.grupos.has(v)?state.grupos.delete(v):state.grupos.add(v);});
 
   syncRangeSelects();
 }
@@ -3642,7 +3668,7 @@ function init() {
 
   document.getElementById('btn_reset').onclick=()=>{
     state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
-    state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
+    state.tabelas.clear(); state.produtos.clear(); state.grupos.clear(); state.vendedor='';
     state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
     state.compareYoY=false; state.brOnly=false;
     applyBrOnlyToggle();

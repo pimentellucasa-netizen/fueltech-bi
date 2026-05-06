@@ -700,10 +700,6 @@
       <label>Tabela de Compra (Patrocínio / Cota)</label>
       <div id="f_tb" class="chips"></div>
     </div>
-    <div class="filter-group">
-      <label>Categoria de Produto</label>
-      <div id="f_grp" class="chips"></div>
-    </div>
     <div class="filter-group produto-search">
       <label>Produto (busca)</label>
       <input type="text" id="f_prod_search" placeholder="Digite para buscar produto..." autocomplete="off">
@@ -713,6 +709,11 @@
     <div class="filter-group">
       <label>Vendedor</label>
       <select id="f_vd"><option value="">Todos</option></select>
+    </div>
+
+    <h3>Categoria de Produto</h3>
+    <div class="filter-group">
+      <div id="f_grp" class="chips"></div>
     </div>
 
     <h3>Opções</h3>
@@ -1330,6 +1331,25 @@ function filteredComparison() {
   const rows = DATA.orders.filter(r => matchRowComp(r, comp));
   return { rows, period:comp };
 }
+// Quando filtro de grupo está ativo, val/fat/qtd da NF refletem APENAS
+// os produtos pertencentes ao(s) grupo(s) — ignora outros itens da mesma nota.
+function effectiveValues(r) {
+  if (state.grupos && state.grupos.size && DATA.produto_grupo) {
+    let val = 0, qtd = 0, total_val = 0;
+    for (const [pi, q, v] of r[C.pr]) {
+      total_val += v;
+      const g = DATA.produto_grupo[pi];
+      if (g !== undefined && state.grupos.has(g)) {
+        val += v;
+        qtd += q;
+      }
+    }
+    const fat_ratio = total_val > 0 ? r[C.fat] / total_val : 0;
+    return { val, fat: val * fat_ratio, qtd };
+  }
+  return { val: r[C.val], fat: r[C.fat], qtd: r[C.qtd] };
+}
+
 function aggregate(rows) {
   const agg={totalVendas:0,totalDev:0,valBruto:0,valLiq:0,fatLiq:0,qtdLiq:0,
     uniqueClients:new Set(),porUf:{},porMesAno:{},porDia:{},porCliente:{},porProduto:{},
@@ -1337,7 +1357,8 @@ function aggregate(rows) {
     exCount:0,exValor:0,exClientes:new Set()};
   for (const r of rows) {
     const isDev = r[C.tr]===1;
-    const val = r[C.val], fat=r[C.fat], qtd=r[C.qtd];
+    const ev = effectiveValues(r);
+    const val = ev.val, fat = ev.fat, qtd = ev.qtd;
     agg.valLiq += val;   // devoluções já vêm negativas
     agg.fatLiq += fat;
     agg.qtdLiq += qtd;
@@ -1375,6 +1396,11 @@ function aggregate(rows) {
       agg.porVend[vd].liq+=val;
     }
     for(const [pi,q,v] of r[C.pr]){
+      // Filtra por grupo (categoria) se ativo
+      if (state.grupos && state.grupos.size && DATA.produto_grupo) {
+        const g = DATA.produto_grupo[pi];
+        if (g === undefined || !state.grupos.has(g)) continue;
+      }
       const pn=DATA.produtos[pi];
       if(!agg.porProduto[pn]) agg.porProduto[pn]={val:0,qtd:0};
       agg.porProduto[pn].val+=v;

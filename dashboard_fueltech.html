@@ -982,6 +982,12 @@
             <th data-k="cd">Código</th>
             <th data-k="nome">Nome</th>
             <th data-k="fant">Fantasia</th>
+            <th data-k="uf">UF</th>
+            <th data-k="cnt" class="num">Pedidos</th>
+            <th data-k="val" class="num">Faturamento</th>
+            <th data-k="pct" class="num">%</th>
+            <th data-k="mom" class="num">MoM</th>
+            <th data-k="yoy" class="num">YoY</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -3005,20 +3011,49 @@ let _mcaCache = null;
 let _mcaActiveLetter = null;
 
 function buildClientsAZCache() {
+  const refY = DATA_RANGE.maxY, refM = DATA_RANGE.maxM;
+  const prevM = refM > 1 ? refM - 1 : 12;
+  const prevY = refM > 1 ? refY : refY - 1;
+  const currYM = refY * 100 + refM;
+  const prevYM = prevY * 100 + prevM;
+  const yoyYM  = (refY - 1) * 100 + refM;
+  const stats = {};
+  for (let r = 0; r < DATA.rows.length; r++) {
+    const row = DATA.rows[r];
+    const ci = row[C.cl];
+    if (ci < 0) continue;
+    if (!stats[ci]) stats[ci] = { cnt: 0, val: 0, ufs: new Set(), valM_curr: 0, valM_prev: 0, valM_yoy: 0 };
+    const isDev = row[C.tr] === 1;
+    const v = isDev ? -row[C.val] : row[C.val];
+    stats[ci].cnt += isDev ? 0 : 1;
+    stats[ci].val += v;
+    const uf = DATA.ufs[row[C.uf]] || '';
+    if (uf) stats[ci].ufs.add(uf);
+    const ym = Math.floor(rowYMD(row) / 100);
+    if (ym === currYM) stats[ci].valM_curr += v;
+    else if (ym === prevYM) stats[ci].valM_prev += v;
+    else if (ym === yoyYM)  stats[ci].valM_yoy  += v;
+  }
+  const grandTotal = Object.values(stats).reduce((s, x) => s + x.val, 0) || 1;
   const arr = [];
   for (let i = 0; i < CLIENT_BY_IDX.length; i++) {
     const c = CLIENT_BY_IDX[i];
     if (!c) continue;
     const nome = (c[1]||'').trim();
     const letter = nome ? nome.charAt(0).toUpperCase() : '#';
-    arr.push({ idx: i, cd: c[0]||'', nome: nome, fant: c[2]||'', letter: /[A-Z]/.test(letter) ? letter : '#' });
+    const st = stats[i] || { cnt: 0, val: 0, ufs: new Set(), valM_curr: 0, valM_prev: 0, valM_yoy: 0 };
+    arr.push({ idx: i, cd: c[0]||'', nome: nome, fant: c[2]||'',
+               letter: /[A-Z]/.test(letter) ? letter : '#',
+               uf: Array.from(st.ufs).sort().join(', '),
+               cnt: st.cnt, val: st.val, pct: st.val / grandTotal * 100,
+               valM_curr: st.valM_curr, valM_prev: st.valM_prev, valM_yoy: st.valM_yoy });
   }
   arr.sort(function(a,b) { return (a.nome||'').localeCompare(b.nome||'') || (a.cd||'').localeCompare(b.cd||''); });
   return arr;
 }
 
 function openClientsAZModal() {
-  if (!_mcaCache) _mcaCache = buildClientsAZCache();
+  _mcaCache = buildClientsAZCache();
   document.getElementById('mca_count').textContent = '\u00b7 ' + fmtInt(_mcaCache.length) + ' clientes cadastrados';
   document.getElementById('mca_search').value = '';
   _mcaActiveLetter = null;
@@ -3041,6 +3076,7 @@ function openClientsAZModal() {
   openModal('modal_clients_az');
 }
 
+let _mcaAZSort = { k: 'val', dir: -1 };
 function renderClientsAZ() {
   const q = (document.getElementById('mca_search').value || '').toLowerCase().trim();
   let arr = _mcaCache;
@@ -3049,20 +3085,57 @@ function renderClientsAZ() {
     arr = arr.filter(function(x) {
       return x.cd.toLowerCase().indexOf(q) >= 0 ||
              x.nome.toLowerCase().indexOf(q) >= 0 ||
-             x.fant.toLowerCase().indexOf(q) >= 0;
+             x.fant.toLowerCase().indexOf(q) >= 0 ||
+             (x.uf||'').toLowerCase().indexOf(q) >= 0;
     });
   }
+  // Ordenação
+  const sk = _mcaAZSort.k, sd = _mcaAZSort.dir;
+  arr = arr.slice().sort(function(a,b) {
+    let av, bv;
+    if (sk === 'mom') {
+      av = (a.valM_prev > 0) ? (a.valM_curr - a.valM_prev) / a.valM_prev : (a.valM_curr > 0 ? 1e9 : 0);
+      bv = (b.valM_prev > 0) ? (b.valM_curr - b.valM_prev) / b.valM_prev : (b.valM_curr > 0 ? 1e9 : 0);
+    } else if (sk === 'yoy') {
+      av = (a.valM_yoy > 0) ? (a.valM_curr - a.valM_yoy) / a.valM_yoy : (a.valM_curr > 0 ? 1e9 : 0);
+      bv = (b.valM_yoy > 0) ? (b.valM_curr - b.valM_yoy) / b.valM_yoy : (b.valM_curr > 0 ? 1e9 : 0);
+    } else {
+      av = a[sk]; bv = b[sk];
+      if (av === undefined) av = 0; if (bv === undefined) bv = 0;
+    }
+    if (typeof av === 'string') return sd * av.localeCompare(bv);
+    return sd * (av - bv);
+  });
+  // Indicadores de sort no thead
+  document.querySelectorAll('#mca_table th').forEach(function(th) {
+    const k = th.dataset.k;
+    const arrow = (k === sk) ? (sd === -1 ? ' ▼' : ' ▲') : '';
+    th.textContent = th.textContent.replace(/ [▼▲]$/, '') + arrow;
+    th.style.color = (k === sk) ? 'var(--orange)' : '';
+  });
   const truncated = arr.length > 500;
   const view = truncated ? arr.slice(0, 500) : arr;
   const tbody = document.querySelector('#mca_table tbody');
   if (!view.length) {
-    tbody.innerHTML = '<tr><td colspan="3" class="empty">Nenhum cliente encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Nenhum cliente encontrado.</td></tr>';
   } else {
     tbody.innerHTML = view.map(function(x) {
+      // Cor do % — mesma regra da modal Top Clientes
+      const pct = x.pct || 0;
+      let pctColor = 'var(--text-soft)';
+      if (pct >= 5)      pctColor = '#ef4444';  // vermelho — alta dependência
+      else if (pct >= 2) pctColor = '#f59e0b';  // âmbar — moderada
+      else if (pct >= 1) pctColor = '#10b981';  // verde — saudável
       return '<tr data-cd="' + escHtml(x.cd) + '" data-nome="' + escHtml(x.nome) + '">'
         + '<td>' + escHtml(x.cd) + '</td>'
         + '<td>' + escHtml(x.nome||'-') + '</td>'
-        + '<td>' + escHtml(x.fant) + '</td>'
+        + '<td>' + escHtml(x.fant||'') + '</td>'
+        + '<td>' + escHtml(x.uf||'—') + '</td>'
+        + '<td class="num">' + fmtInt(x.cnt) + '</td>'
+        + '<td class="num">' + fmtMoneyShort(x.val) + '</td>'
+        + '<td class="num"><strong style="color:' + pctColor + '">' + pct.toFixed(2).replace('.',',') + '%</strong></td>'
+        + '<td class="num">' + cellDelta(x.valM_curr || 0, x.valM_prev || 0) + '</td>'
+        + '<td class="num">' + cellDelta(x.valM_curr || 0, x.valM_yoy  || 0) + '</td>'
         + '</tr>';
     }).join('');
     tbody.querySelectorAll('tr').forEach(function(tr) {
@@ -3076,7 +3149,6 @@ function renderClientsAZ() {
     truncated ? 'Mostrando primeiros 500 de ' + fmtInt(arr.length) + ' resultados - refine a busca'
               : fmtInt(arr.length) + ' cliente(s)';
 }
-
 function applyClientFilter(cd, nome) {
   state.cd = cd || '';
   state.nome = nome || '';
@@ -3544,6 +3616,15 @@ function init() {
   });
   const mcaSearch = document.getElementById('mca_search');
   if (mcaSearch) mcaSearch.oninput = renderClientsAZ;
+  document.querySelectorAll('#mca_table th').forEach(function(th) {
+    th.style.cursor = 'pointer';
+    th.onclick = function() {
+      const k = th.dataset.k; if (!k) return;
+      if (_mcaAZSort.k === k) _mcaAZSort.dir *= -1;
+      else { _mcaAZSort.k = k; _mcaAZSort.dir = -1; }
+      renderClientsAZ();
+    };
+  });
 
   // Fechar modais
   document.querySelectorAll('#mce_tabs button').forEach(function(b) {

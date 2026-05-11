@@ -403,6 +403,29 @@
   @media (max-width:720px){.layout{grid-template-columns:1fr}aside{position:relative;max-height:none;top:0}
     .kpis{grid-template-columns:repeat(2,1fr)}header{flex-wrap:wrap}}
   @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  /* ===== Meta x Realizado ===== */
+  .meta-panel{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+  .meta-panel h2{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.3px;color:var(--text);
+    padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .meta-month{background:var(--input-bg);border:1px solid var(--input-border);border-radius:var(--radius-sm);padding:10px 12px}
+  .meta-month label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;display:block;margin-bottom:6px}
+  .meta-month input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);
+    color:var(--text);font-size:14px;font-weight:700;padding:2px 0;outline:none;font-family:inherit;text-align:right}
+  .meta-month input:focus{border-bottom-color:var(--orange)}
+  .meta-month .meta-vals{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;gap:6px}
+  .meta-month .meta-real{color:var(--text-soft)}
+  .meta-month .meta-bar-wrap{height:4px;background:var(--border);border-radius:2px;margin-top:6px}
+  .meta-month .meta-bar{height:100%;border-radius:2px;transition:width .3s}
+  .meta-month .meta-pct{font-size:11px;font-weight:700;margin-top:4px;text-align:right}
+  .meta-save{margin-top:10px;padding:7px 16px;background:linear-gradient(135deg,var(--orange) 0%,var(--orange-2) 100%);
+    color:#000;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:11px;font-weight:700;
+    font-family:inherit;transition:all .15s;letter-spacing:.3px}
+  .meta-save:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,38,38,.35)}
+  .meta-toggle-btn{font-size:11px;color:var(--muted);background:transparent;border:1px solid var(--border);
+    padding:3px 10px;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .15s}
+  .meta-toggle-btn:hover{border-color:var(--orange);color:var(--orange)}
   .loader{display:flex;align-items:center;justify-content:center;height:100vh;font-size:14px;color:var(--muted)}
 </style>
 
@@ -716,7 +739,7 @@
       <label><input type="checkbox" id="f_excl_padrao"> Excluir CLIENTE PADRÃO (balcão)</label>
     </div>
     <div class="filter-group">
-      <label><input type="checkbox" id="f_incl_dev" checked> Incluir devoluções</label>
+      <label><input type="checkbox" id="f_incl_dev"> Incluir devoluções</label>
     </div>
 
     <button class="btn-reset" id="btn_reset">Limpar filtros</button>
@@ -724,6 +747,21 @@
 
   <main>
     <section class="client-diag" id="client_diag" aria-live="polite"></section>
+
+    <!-- Meta x Realizado -->
+    <div class="meta-panel" id="meta_panel" style="display:none">
+      <h2>
+        <span>🎯 Meta × Realizado — Faturamento Mensal</span>
+        <button class="meta-toggle-btn" id="meta_toggle_edit">✎ Editar metas</button>
+      </h2>
+      <div class="meta-grid" id="meta_grid"></div>
+      <div id="meta_edit_area" style="display:none;margin-top:14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Digite a meta mensal em R$ (ex: 5000000 para R$ 5M)</div>
+        <div class="meta-grid" id="meta_inputs_grid"></div>
+        <button class="meta-save" id="meta_save_btn">💾 Salvar metas</button>
+      </div>
+    </div>
+
     <div class="kpis" id="kpis"></div>
 
     <div class="row r2">
@@ -1059,7 +1097,7 @@ const state = {
   ufs:new Set(),
   tabelas:new Set(), produtos:new Set(),
   vendedor:'',
-  excluirPadrao:false, incluirDev:true,
+  excluirPadrao:false, incluirDev:false,
   mapMetric:'val', mapAgg:'uf', tableLimit:500,
   // Aba ativa do dashboard
   activeTab:'brasil',
@@ -2669,7 +2707,8 @@ function renderAll() {
     const comp=filteredComparison();
     const aggComp = comp ? aggregate(comp.rows) : null;
     renderClientDiagnosis(rows);
-    renderKPIs(agg, aggComp); renderMap(agg);
+    renderKPIs(agg, aggComp);
+  renderMetaPanel(); renderMap(agg);
     renderTimeline(agg, aggComp); renderTopClients(agg); renderTopProdutos(agg);
     renderTabelas(agg); renderVends(agg);
     renderVendUfs(agg); renderVendTabelas(agg);
@@ -3730,7 +3769,7 @@ function init() {
     applyQuickRange('12m');
     document.getElementById('f_nome').value=''; document.getElementById('f_cd').value='';
     document.getElementById('f_excl_padrao').checked=false;
-    document.getElementById('f_incl_dev').checked=true;
+    document.getElementById('f_incl_dev').checked=false;
     document.getElementById('f_prod_search').value='';
     document.getElementById('f_compare_yoy').checked=false;
     CAL.pendingCompareYoY = false;
@@ -3774,6 +3813,7 @@ function init() {
   syncCdMatch();
   // Sincroniza UI do toggle Brasil-only
   applyBrOnlyToggle();
+  initMetaPanel();
 
   // Theme toggle
   const root = document.documentElement;
@@ -3792,6 +3832,101 @@ function init() {
     renderAll();
   };
 }
+
+// ===== META x REALIZADO =====
+const META_KEY = 'fueltech_metas_mensais';
+function loadMetas() {
+  try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveMetas(obj) {
+  try { localStorage.setItem(META_KEY, JSON.stringify(obj)); } catch(e) {}
+}
+
+function renderMetaPanel() {
+  const panel = document.getElementById('meta_panel');
+  const grid  = document.getElementById('meta_grid');
+  const inputsGrid = document.getElementById('meta_inputs_grid');
+  if (!panel || !grid) return;
+
+  // Descobrir quais ano/mês têm dados no recorte atual
+  const monthMap = {}; // 'YYYY-MM' -> realizado
+  for (const r of DATA.orders) {
+    if (!state.incluirDev && r[C.tr] === 1) continue;
+    if (!matchRow(r)) continue;
+    const d = rowYMD(r);
+    const y = Math.floor(d / 10000);
+    const m = Math.floor((d % 10000) / 100);
+    const key = y + '-' + String(m).padStart(2,'0');
+    if (!monthMap[key]) monthMap[key] = 0;
+    monthMap[key] += r[C.val];
+  }
+
+  const keys = Object.keys(monthMap).sort();
+  if (!keys.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const metas = loadMetas();
+  const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Cards de visualização
+  grid.innerHTML = keys.map(function(k) {
+    const [y, mm] = k.split('-');
+    const real = monthMap[k] || 0;
+    const meta = metas[k] ? +metas[k] : 0;
+    const pct  = meta > 0 ? (real / meta * 100) : 0;
+    const barW = Math.min(pct, 100).toFixed(1);
+    const barColor = pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--yellow)' : 'var(--orange)';
+    const pctTxt   = meta > 0 ? pct.toFixed(1) + '%' : '—';
+    const pctColor = pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--yellow)' : (meta > 0 ? 'var(--orange)' : 'var(--muted)');
+    return '<div class="meta-month">'
+      + '<label>' + mNames[+mm-1] + '/' + y + '</label>'
+      + '<div class="meta-vals">'
+      +   '<span class="meta-real"><strong>' + fmtMoneyShort(real) + '</strong> realizado</span>'
+      +   '<span style="color:var(--muted)">' + (meta > 0 ? 'Meta: ' + fmtMoneyShort(meta) : '<em>sem meta</em>') + '</span>'
+      + '</div>'
+      + '<div class="meta-bar-wrap"><div class="meta-bar" style="width:' + barW + '%;background:' + barColor + '"></div></div>'
+      + '<div class="meta-pct" style="color:' + pctColor + '">' + pctTxt + '</div>'
+      + '</div>';
+  }).join('');
+
+  // Inputs de edição
+  inputsGrid.innerHTML = keys.map(function(k) {
+    const [y, mm] = k.split('-');
+    const meta = metas[k] || '';
+    return '<div class="meta-month">'
+      + '<label>' + mNames[+mm-1] + '/' + y + '</label>'
+      + '<input type="number" data-key="' + k + '" value="' + meta + '" placeholder="0" step="100000">'
+      + '</div>';
+  }).join('');
+}
+
+function initMetaPanel() {
+  const toggleBtn = document.getElementById('meta_toggle_edit');
+  const editArea  = document.getElementById('meta_edit_area');
+  const saveBtn   = document.getElementById('meta_save_btn');
+  if (!toggleBtn) return;
+
+  toggleBtn.onclick = function() {
+    const open = editArea.style.display !== 'none';
+    editArea.style.display = open ? 'none' : 'block';
+    toggleBtn.textContent  = open ? '✎ Editar metas' : '✕ Fechar';
+  };
+
+  saveBtn.onclick = function() {
+    const metas = loadMetas();
+    document.querySelectorAll('#meta_inputs_grid input').forEach(function(inp) {
+      const k = inp.dataset.key;
+      const v = inp.value.trim();
+      if (v && +v > 0) metas[k] = +v;
+      else delete metas[k];
+    });
+    saveMetas(metas);
+    renderMetaPanel();
+    editArea.style.display = 'none';
+    toggleBtn.textContent = '✎ Editar metas';
+  };
+}
+
 setTimeout(init,30);
 </script>
 

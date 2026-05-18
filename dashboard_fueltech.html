@@ -404,6 +404,26 @@
     .kpis{grid-template-columns:repeat(2,1fr)}header{flex-wrap:wrap}}
   @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   /* ===== Meta x Realizado ===== */
+  /* ===== Multi-check vendedor ===== */
+  .multi-check-wrap{position:relative}
+  .multi-check-trigger{width:100%;padding:8px 10px;background:var(--input-bg);
+    border:1px solid var(--input-border);color:var(--text);border-radius:var(--radius-sm);
+    font-size:12px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;
+    align-items:center;font-family:inherit;transition:border-color .15s}
+  .multi-check-trigger:hover,.multi-check-trigger.open{border-color:var(--orange)}
+  .multi-check-trigger .chev{font-size:9px;color:var(--muted);transition:transform .2s}
+  .multi-check-trigger.open .chev{transform:rotate(180deg);color:var(--orange)}
+  .multi-check-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+    background:var(--card);border:1px solid var(--orange);border-radius:var(--radius-sm);
+    z-index:200;box-shadow:var(--shadow-md);max-height:220px;overflow-y:auto}
+  .multi-check-dropdown.open{display:block}
+  .multi-check-item{display:flex;align-items:center;gap:8px;padding:7px 10px;
+    cursor:pointer;font-size:12px;transition:background .1s;border-bottom:1px solid var(--border)}
+  .multi-check-item:last-child{border-bottom:none}
+  .multi-check-item:hover{background:var(--card-hover)}
+  .multi-check-item input[type=checkbox]{accent-color:var(--orange);width:13px;height:13px;cursor:pointer}
+  .multi-check-all{font-weight:700;color:var(--orange);background:var(--bg-alt)}
+  .multi-check-all:hover{background:var(--card-hover)}
   .meta-panel{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);
     padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px}
   .meta-panel h2{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.3px;color:var(--text);
@@ -731,7 +751,13 @@
     </div>
     <div class="filter-group">
       <label>Vendedor</label>
-      <select id="f_vd"><option value="">Todos</option></select>
+      <div class="multi-check-wrap" id="vd_wrap">
+        <button type="button" class="multi-check-trigger" id="vd_trigger">
+          <span id="vd_label">Todos os vendedores</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="multi-check-dropdown" id="vd_dropdown"></div>
+      </div>
     </div>
 
     <h3>Opções</h3>
@@ -1097,6 +1123,7 @@ const state = {
   ufs:new Set(),
   tabelas:new Set(), produtos:new Set(),
   vendedor:'',
+  vendedores:new Set(),
   excluirPadrao:false, incluirDev:false,
   mapMetric:'val', mapAgg:'uf', tableLimit:500,
   // Aba ativa do dashboard
@@ -1269,7 +1296,7 @@ function matchRow(r) {
   }
   if (state.ufs.size && !state.ufs.has(ufStr)) return false;
   if (state.tabelas.size && !state.tabelas.has(r[C.tb])) return false;
-  if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) return false;
+  if (state.vendedores.size > 0 && !state.vendedores.has(r[C.vd])) return false;
   const cli = CLIENT_BY_IDX[r[C.cl]];
   if (state.excluirPadrao && cli && cli[1]==='CLIENTE PADRAO') return false;
   // Filtro "Brasil sem export e intercompany"
@@ -1327,7 +1354,7 @@ function matchRowComp(r, comp) {
   }
   if (state.ufs.size && !state.ufs.has(ufStr)) return false;
   if (state.tabelas.size && !state.tabelas.has(r[C.tb])) return false;
-  if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) return false;
+  if (state.vendedores.size > 0 && !state.vendedores.has(r[C.vd])) return false;
   const cli = CLIENT_BY_IDX[r[C.cl]];
   if (state.excluirPadrao && cli && cli[1]==='CLIENTE PADRAO') return false;
   // Filtro "Brasil sem export e intercompany"
@@ -1903,8 +1930,10 @@ function renderDevs(agg) {
 function vendFilterLabel() {
   // Compose a label that tells the user what's filtering these two panels
   const parts=[];
-  if(state.vendedor!==''){
-    parts.push(DATA.vendedores[+state.vendedor]);
+  if(state.vendedores.size>0){
+    const vnames=[...state.vendedores].slice(0,2).map(i=>DATA.vendedores[i]);
+    if(state.vendedores.size>2) vnames.push('+'+(state.vendedores.size-2));
+    parts.push(vnames.join(', '));
   }
   if(state.tabelas.size>0){
     const tb=[...state.tabelas].slice(0,2).map(i=>DATA.tabelas[i]).join(', ');
@@ -2655,9 +2684,53 @@ function applyQuickRange(q) {
 function renderFilters() {
   document.getElementById('f_uf').innerHTML=DATA.ufs.map(u=>`<span class="chip ${state.ufs.has(u)?'active':''}" data-v="${u}">${u}</span>`).join('');
   document.getElementById('f_tb').innerHTML=DATA.tabelas.map((t,i)=>`<span class="chip ${state.tabelas.has(i)?'active':''}" data-v="${i}">${t}</span>`).join('');
-  const vd=document.getElementById('f_vd');
-  if(vd.children.length<=1){ DATA.vendedores.forEach((v,i)=>{const o=document.createElement('option'); o.value=i; o.textContent=v; vd.appendChild(o);}); }
-  vd.value=state.vendedor;
+  // Multi-check vendedores
+  (function(){
+    const dd = document.getElementById('vd_dropdown');
+    if (dd && dd.children.length === 0) {
+      // "Todos" item
+      const allItem = document.createElement('div');
+      allItem.className = 'multi-check-item multi-check-all';
+      allItem.innerHTML = '<input type="checkbox" id="vd_all"> <label for="vd_all" style="cursor:pointer">Todos os vendedores</label>';
+      allItem.querySelector('#vd_all').onchange = function() {
+        state.vendedores.clear();
+        dd.querySelectorAll('input[data-i]').forEach(cb => { cb.checked = false; });
+        updateVdLabel();
+        renderAll();
+      };
+      dd.appendChild(allItem);
+      DATA.vendedores.forEach(function(v, i) {
+        const item = document.createElement('div');
+        item.className = 'multi-check-item';
+        item.innerHTML = '<input type="checkbox" data-i="'+i+'" id="vd_'+i+'"> <label for="vd_'+i+'" style="cursor:pointer">'+escHtml(v)+'</label>';
+        item.querySelector('input').onchange = function(e) {
+          if (e.target.checked) state.vendedores.add(i);
+          else state.vendedores.delete(i);
+          updateVdLabel();
+          renderAll();
+        };
+        dd.appendChild(item);
+      });
+      // Toggle dropdown
+      const trigger = document.getElementById('vd_trigger');
+      trigger.onclick = function(e) {
+        e.stopPropagation();
+        dd.classList.toggle('open');
+        trigger.classList.toggle('open');
+      };
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('#vd_wrap')) {
+          dd.classList.remove('open');
+          document.getElementById('vd_trigger').classList.remove('open');
+        }
+      });
+    }
+    // Sync checkboxes
+    dd.querySelectorAll('input[data-i]').forEach(cb => {
+      cb.checked = state.vendedores.has(+cb.dataset.i);
+    });
+    updateVdLabel();
+  })();
 
   // selected produtos
   const sel=document.getElementById('selected_prods');
@@ -2700,6 +2773,13 @@ function setupProdSearch() {
 
 // ===== RENDER ALL =====
 let debounceTimer;
+function updateVdLabel() {
+  const lbl = document.getElementById('vd_label');
+  if (!lbl) return;
+  if (state.vendedores.size === 0) { lbl.textContent = 'Todos os vendedores'; return; }
+  const names = [...state.vendedores].map(i => DATA.vendedores[i]);
+  lbl.textContent = names.length <= 2 ? names.join(', ') : names.slice(0,2).join(', ') + ' +' + (names.length-2);
+}
 function renderAll() {
   clearTimeout(debounceTimer);
   debounceTimer=setTimeout(()=>{
@@ -2909,7 +2989,7 @@ function openClientsModal() {
     const ufStr = DATA.ufs[r[C.uf]];
     if (state.ufs.size && !state.ufs.has(ufStr)) continue;
     if (state.tabelas.size && !state.tabelas.has(r[C.tb])) continue;
-    if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) continue;
+    if (state.vendedores.size > 0 && !state.vendedores.has(r[C.vd])) continue;
     const cli = CLIENT_BY_IDX[r[C.cl]];
     if (state.excluirPadrao && cli && cli[1] === 'CLIENTE PADRAO') continue;
     if (state.brOnly) {
@@ -3302,7 +3382,7 @@ function aggregateExports() {
     if (!state.incluirDev && r[C.tr] === 1) continue;
     if (!inRange(r, state.rangeFrom, state.rangeTo)) continue;
     if (state.tabelas.size && !state.tabelas.has(r[C.tb])) continue;
-    if (state.vendedor !== '' && r[C.vd] !== +state.vendedor) continue;
+    if (state.vendedores.size > 0 && !state.vendedores.has(r[C.vd])) continue;
     if (DATA.ufs[r[C.uf]] !== 'EX') continue;
     if (state.produtos.size) {
       let ok=false; for(const [pi] of r[C.pr]) if(state.produtos.has(pi)){ok=true;break;}
@@ -3587,7 +3667,7 @@ function init() {
     syncCdMatch();
     renderAll();
   };
-  document.getElementById('f_vd').onchange=e=>{state.vendedor=e.target.value; renderAll();};
+  // vendedor: handled by multi-check init above
   document.getElementById('f_excl_padrao').onchange=e=>{state.excluirPadrao=e.target.checked; renderAll();};
   document.getElementById('f_incl_dev').onchange=e=>{state.incluirDev=e.target.checked; renderAll();};
 
@@ -3763,7 +3843,7 @@ function init() {
   document.getElementById('btn_reset').onclick=()=>{
     state.nome=''; state.cd=''; state.nomeAutoFromCd=''; state.ufs.clear();
     state.tabelas.clear(); state.produtos.clear(); state.vendedor='';
-    state.excluirPadrao=false; state.incluirDev=true; state.tableLimit=500;
+    state.excluirPadrao=false; state.incluirDev=false; state.vendedores.clear(); state.tableLimit=500;
     state.compareYoY=false; state.brOnly=false;
     applyBrOnlyToggle();
     applyQuickRange('12m');

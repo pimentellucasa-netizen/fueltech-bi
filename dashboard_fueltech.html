@@ -841,15 +841,21 @@
         </h2>
         <div class="chart-wrap"><canvas id="chart_produtos"></canvas></div>
       </div>
-      <div class="panel" style="overflow:auto">
-        <h2 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="panel" style="display:flex;flex-direction:column">
+        <h2 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
           <span>🎯 Meta × Realizado</span>
-          <button class="meta-toggle-btn" id="meta_toggle_edit">✎ Editar metas</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span id="meta_pct_badge" style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;display:none"></span>
+            <button class="meta-toggle-btn" id="meta_toggle_edit">✎ Editar meta</button>
+          </div>
         </h2>
-        <div id="meta_panel" style="flex:1">
-          <div class="meta-grid" id="meta_grid" style="margin-bottom:0"></div>
-          <div id="meta_edit_area" style="display:none;margin-top:12px">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Digite a meta em R$ (ex: 5000000 para R$ 5M)</div>
+        <div id="meta_panel" style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="flex:1;position:relative;min-height:180px">
+            <canvas id="chart_meta" style="position:absolute;inset:0;width:100%!important;height:100%!important"></canvas>
+          </div>
+          <div id="meta_summary_row" style="display:flex;gap:16px;padding:8px 4px 0;font-size:11px;flex-wrap:wrap"></div>
+          <div id="meta_edit_area" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Meta mensal em R$ por mês (ex: 5000000 para R$ 5M)</div>
             <div class="meta-grid" id="meta_inputs_grid"></div>
             <button class="meta-save" id="meta_save_btn">💾 Salvar metas</button>
           </div>
@@ -3920,60 +3926,207 @@ function saveMetas(obj) {
 }
 
 function renderMetaPanel() {
-  const panel = document.getElementById('meta_panel');
-  const grid  = document.getElementById('meta_grid');
-  const inputsGrid = document.getElementById('meta_inputs_grid');
-  if (!panel || !grid) return;
+  const panel    = document.getElementById('meta_panel');
+  const editGrid = document.getElementById('meta_inputs_grid');
+  if (!panel) return;
 
-  // Descobrir quais ano/mês têm dados no recorte atual
-  const monthMap = {}; // 'YYYY-MM' -> realizado
+  // ── Coletar dados dia a dia dentro do recorte ──
+  const dayMap = {}; // 'YYYYMMDD' -> valor realizado
   for (const r of DATA.orders) {
     if (!state.incluirDev && r[C.tr] === 1) continue;
     if (!matchRow(r)) continue;
-    const d = rowYMD(r);
-    const y = Math.floor(d / 10000);
-    const m = Math.floor((d % 10000) / 100);
-    const key = y + '-' + String(m).padStart(2,'0');
-    if (!monthMap[key]) monthMap[key] = 0;
-    monthMap[key] += r[C.val];
+    const d = String(rowYMD(r));
+    dayMap[d] = (dayMap[d] || 0) + r[C.val];
   }
 
-  const keys = Object.keys(monthMap).sort();
-  if (!keys.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum dado no recorte atual.</div>'; return; }
+  const days = Object.keys(dayMap).sort();
+  if (!days.length) {
+    const cv = document.getElementById('chart_meta');
+    if (cv) cv.style.display = 'none';
+    return;
+  }
 
+  // ── Descobrir meses no recorte e calcular meta proporcional ──
   const metas = loadMetas();
   const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-  // Cards de visualização
-  grid.innerHTML = keys.map(function(k) {
-    const [y, mm] = k.split('-');
-    const real = monthMap[k] || 0;
-    const meta = metas[k] ? +metas[k] : 0;
-    const pct  = meta > 0 ? (real / meta * 100) : 0;
-    const barW = Math.min(pct, 100).toFixed(1);
-    const barColor = pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--yellow)' : 'var(--orange)';
-    const pctTxt   = meta > 0 ? pct.toFixed(1) + '%' : '—';
-    const pctColor = pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--yellow)' : (meta > 0 ? 'var(--orange)' : 'var(--muted)');
-    return '<div class="meta-month">'
-      + '<label>' + mNames[+mm-1] + '/' + y + '</label>'
-      + '<div class="meta-vals">'
-      +   '<span class="meta-real"><strong>' + fmtMoneyShort(real) + '</strong> realizado</span>'
-      +   '<span style="color:var(--muted)">' + (meta > 0 ? 'Meta: ' + fmtMoneyShort(meta) : '<em>sem meta</em>') + '</span>'
-      + '</div>'
-      + '<div class="meta-bar-wrap"><div class="meta-bar" style="width:' + barW + '%;background:' + barColor + '"></div></div>'
-      + '<div class="meta-pct" style="color:' + pctColor + '">' + pctTxt + '</div>'
-      + '</div>';
-  }).join('');
+  function daysInMonth(y, m) {
+    return new Date(y, m, 0).getDate();
+  }
 
-  // Inputs de edição
-  inputsGrid.innerHTML = keys.map(function(k) {
-    const [y, mm] = k.split('-');
-    const meta = metas[k] || '';
-    return '<div class="meta-month">'
-      + '<label>' + mNames[+mm-1] + '/' + y + '</label>'
-      + '<input type="number" data-key="' + k + '" value="' + meta + '" placeholder="0" step="100000">'
-      + '</div>';
-  }).join('');
+  // Para cada dia no recorte, calcular meta linear acumulada
+  // Meta linear = (dia_no_mês / total_dias_mês) * meta_mês — proporcional ao recorte
+  // Se recorte é parcial (ex: 1–15 de março), a linha de meta vai de 0 até meta*(15/31)
+
+  // Agrupar dias por mês para saber o range de cada mês no recorte
+  const monthRanges = {}; // 'YYYY-MM' -> {minD, maxD, totalDays}
+  for (const d of days) {
+    const y = d.slice(0,4), m = d.slice(4,6), day = +d.slice(6,8);
+    const key = y + '-' + m;
+    if (!monthRanges[key]) monthRanges[key] = { minD: day, maxD: day, totalDays: daysInMonth(+y, +m), y: +y, m: +m };
+    else {
+      monthRanges[key].minD = Math.min(monthRanges[key].minD, day);
+      monthRanges[key].maxD = Math.max(monthRanges[key].maxD, day);
+    }
+  }
+
+  // Construir pontos do gráfico
+  const labels       = [];
+  const realAcum     = [];
+  const metaLinear   = [];
+  let acum = 0;
+
+  for (const d of days) {
+    const y = d.slice(0,4), m = d.slice(4,6), day = +d.slice(6,8);
+    const mk = y + '-' + m;
+    const mr = monthRanges[mk];
+    const metaMes = metas[mk] ? +metas[mk] : 0;
+
+    // Meta proporcional: quanto da meta corresponde a esse dia
+    // Linha linear: meta * (dia / totalDays)
+    const metaAcumDia = metaMes > 0 ? (metaMes * day / mr.totalDays) : null;
+
+    acum += dayMap[d] || 0;
+    realAcum.push(acum);
+    metaLinear.push(metaAcumDia);
+
+    // Label: dia/mês
+    const label = day + '/' + mNames[+m-1];
+    labels.push(label);
+  }
+
+  // ── Totais por mês para summary ──
+  const monthTotals = {};
+  for (const d of days) {
+    const mk = d.slice(0,4) + '-' + d.slice(4,6);
+    monthTotals[mk] = (monthTotals[mk] || 0) + (dayMap[d] || 0);
+  }
+
+  const totalReal = acum;
+  const totalMeta = Object.entries(monthRanges).reduce((s, [mk, mr]) => {
+    const metaMes = metas[mk] ? +metas[mk] : 0;
+    // Proporcional ao range do recorte nesse mês
+    return s + metaMes * (mr.maxD - mr.minD + 1) / mr.totalDays;
+  }, 0);
+  const pct = totalMeta > 0 ? totalReal / totalMeta * 100 : 0;
+
+  // ── Badge % ──
+  const badge = document.getElementById('meta_pct_badge');
+  if (badge && totalMeta > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = pct.toFixed(1) + '% da meta';
+    badge.style.background = pct >= 100 ? 'rgba(0,200,83,.15)' : pct >= 80 ? 'rgba(255,193,7,.15)' : 'rgba(220,38,38,.15)';
+    badge.style.color       = pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--yellow)' : 'var(--orange)';
+    badge.style.border      = '1px solid ' + (pct >= 100 ? 'var(--green)' : pct >= 80 ? 'var(--yellow)' : 'var(--orange)');
+  } else if (badge) { badge.style.display = 'none'; }
+
+  // ── Summary row ──
+  const sumRow = document.getElementById('meta_summary_row');
+  if (sumRow) {
+    const parts = Object.entries(monthTotals).map(function([mk, real]) {
+      const [y, mm] = mk.split('-');
+      const meta = metas[mk] ? +metas[mk] : 0;
+      const mr   = monthRanges[mk];
+      const metaProp = meta * (mr.maxD - mr.minD + 1) / mr.totalDays;
+      const p = metaProp > 0 ? (real/metaProp*100).toFixed(1) + '%' : '—';
+      const col = metaProp > 0 && real >= metaProp ? 'var(--green)' : metaProp > 0 && real/metaProp >= .8 ? 'var(--yellow)' : metaProp > 0 ? 'var(--orange)' : 'var(--muted)';
+      return '<span style="color:var(--muted)">' + mNames[+mm-1] + '/' + y + ': '
+        + '<strong style="color:var(--text)">' + fmtMoneyShort(real) + '</strong>'
+        + (meta > 0 ? ' <span style="color:' + col + '">(' + p + ')</span>' : '') + '</span>';
+    });
+    sumRow.innerHTML = parts.join('<span style="color:var(--border)"> │ </span>');
+  }
+
+  // ── Gráfico ──
+  const hasMeta = metaLinear.some(v => v !== null);
+  const datasets = [
+    {
+      label: 'Realizado',
+      data: realAcum,
+      borderColor: 'var(--orange)',
+      backgroundColor: 'rgba(220,38,38,.08)',
+      borderWidth: 2,
+      pointRadius: days.length <= 31 ? 3 : 0,
+      pointHoverRadius: 5,
+      fill: true,
+      tension: 0.3,
+    }
+  ];
+  if (hasMeta) {
+    datasets.push({
+      label: 'Meta (linear)',
+      data: metaLinear,
+      borderColor: '#6ee7b7',
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: false,
+      tension: 0,
+      spanGaps: true,
+    });
+  }
+
+  const cv = document.getElementById('chart_meta');
+  if (!cv) return;
+  cv.style.display = 'block';
+
+  if (window._chartMeta) { window._chartMeta.destroy(); }
+  window._chartMeta = new Chart(cv, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: '#aaa', usePointStyle: true, pointStyleWidth: 10, boxHeight: 6 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + fmtMoneyShort(ctx.raw || 0);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,.05)' },
+          ticks: {
+            color: '#666',
+            maxTicksLimit: 15,
+            maxRotation: 0,
+            font: { size: 10 }
+          }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,.05)' },
+          ticks: {
+            color: '#666',
+            font: { size: 10 },
+            callback: function(v) { return fmtMoneyShort(v); }
+          }
+        }
+      }
+    }
+  });
+
+  // ── Inputs de edição ──
+  const monthKeys = Object.keys(monthRanges).sort();
+  if (editGrid) {
+    editGrid.innerHTML = monthKeys.map(function(k) {
+      const [y, mm] = k.split('-');
+      const meta = metas[k] || '';
+      return '<div class="meta-month">'
+        + '<label>' + mNames[+mm-1] + '/' + y + '</label>'
+        + '<input type="number" data-key="' + k + '" value="' + meta + '" placeholder="0" step="100000">'
+        + '</div>';
+    }).join('');
+  }
 }
 
 function initMetaPanel() {

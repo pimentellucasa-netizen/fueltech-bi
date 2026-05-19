@@ -19,6 +19,20 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
+  /* ===== Meta x Realizado ===== */
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+  .meta-month{background:var(--input-bg,#111);border:1px solid var(--border,#2a2a2a);border-radius:6px;padding:8px 10px}
+  .meta-month label{font-size:10px;color:var(--muted,#9a9a9a);text-transform:uppercase;letter-spacing:.8px;font-weight:600;display:block;margin-bottom:4px}
+  .meta-month input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border,#2a2a2a);
+    color:var(--text,#fff);font-size:13px;font-weight:700;padding:2px 0;outline:none;font-family:inherit;text-align:right}
+  .meta-month input:focus{border-bottom-color:var(--orange,#DC2626)}
+  .meta-save{margin-top:10px;padding:6px 14px;background:linear-gradient(135deg,#DC2626 0%,#EF4444 100%);
+    color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;
+    font-family:inherit;transition:all .15s}
+  .meta-save:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,38,38,.35)}
+  .meta-toggle-btn{font-size:11px;color:var(--muted,#9a9a9a);background:transparent;border:1px solid var(--border,#2a2a2a);
+    padding:3px 10px;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .15s}
+  .meta-toggle-btn:hover{border-color:var(--orange,#DC2626);color:var(--orange,#DC2626)}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     background:var(--bg); color:var(--text); font-size:13px}
   header{background:#000; padding:14px 24px; border-bottom:3px solid var(--orange);
@@ -412,7 +426,26 @@
         <h2><span>Top 10 Produtos LATAM</span></h2>
         <div class="chart-wrap"><canvas id="chart_produtos"></canvas></div>
       </div>
-      <div class="panel" style="display:none"><!-- placeholder --></div>
+      <div class="panel" style="display:flex;flex-direction:column">
+        <h2 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;flex-shrink:0">
+          <span>🎯 Meta × Realizado — LATAM</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span id="meta_pct_badge" style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;display:none"></span>
+            <button class="meta-toggle-btn" id="meta_toggle_edit">✎ Editar meta</button>
+          </div>
+        </h2>
+        <div id="meta_panel" style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="flex:1;position:relative;min-height:180px">
+            <canvas id="chart_meta" style="position:absolute;inset:0;width:100%!important;height:100%!important"></canvas>
+          </div>
+          <div id="meta_summary_row" style="display:flex;gap:16px;padding:8px 4px 0;font-size:11px;flex-wrap:wrap"></div>
+          <div id="meta_edit_area" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Meta mensal em R$ (ex: 5000000 para R$ 5M)</div>
+            <div class="meta-grid" id="meta_inputs_grid"></div>
+            <button class="meta-save" id="meta_save_btn">💾 Salvar metas</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="panel">
@@ -1272,6 +1305,180 @@ function renderChips() {
 }
 
 let _renderTimer;
+// ===== META x REALIZADO — LATAM =====
+const META_KEY = 'fueltech_metas_latam';
+function loadMetas() {
+  try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveMetas(obj) {
+  try { localStorage.setItem(META_KEY, JSON.stringify(obj)); } catch(e) {}
+}
+
+function renderMetaPanel() {
+  const editGrid = document.getElementById('meta_inputs_grid');
+
+  // Filtro LATAM igual ao aggregate()
+  const fromN = state.rangeFrom ? +state.rangeFrom : 0;
+  const toN   = state.rangeTo   ? +state.rangeTo   : 99999999;
+
+  const dayMap = {};
+  for (const r of DATA.orders) {
+    if (DATA.ufs[r[C.uf]] !== 'EX') continue;
+    const isDev = r[C.tr] === 1;
+    if (!state.incluirDev && isDev) continue;
+    const pais = DATA.paises[r[C.pa]] || '?';
+    if (!LATAM_SET.has(pais)) continue;
+    if (state.paises.size && !state.paises.has(pais)) continue;
+    const cli = DATA.clients[r[C.cl]] || ['','',''];
+    if (state.excluirPadrao && cli[1] === 'CLIENTE PADRAO') continue;
+    const dt = +r[C.data];
+    if (dt < fromN || dt > toN) continue;
+    const ds = String(r[C.data]);
+    dayMap[ds] = (dayMap[ds] || 0) + r[C.val];
+  }
+
+  const days = Object.keys(dayMap).sort();
+  if (!days.length) return;
+
+  const metas  = loadMetas();
+  const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+  // Ranges por mês
+  const monthRanges = {};
+  for (const d of days) {
+    const y = d.slice(0,4), m = d.slice(4,6), day = +d.slice(6,8);
+    const key = y + '-' + m;
+    if (!monthRanges[key]) monthRanges[key] = { minD: day, maxD: day, totalDays: daysInMonth(+y, +m), y: +y, m: +m };
+    else { monthRanges[key].minD = Math.min(monthRanges[key].minD, day); monthRanges[key].maxD = Math.max(monthRanges[key].maxD, day); }
+  }
+
+  // Pontos acumulados
+  const labelsAll = [], realAcumAll = [], metaLinearAll = [], projecaoData = [];
+  let acum = 0;
+
+  for (const d of days) {
+    const y = d.slice(0,4), m = d.slice(4,6), day = +d.slice(6,8);
+    const mk = y + '-' + m;
+    const mr = monthRanges[mk];
+    const metaMes = metas[mk] ? +metas[mk] : 0;
+    acum += dayMap[d] || 0;
+    realAcumAll.push(acum);
+    metaLinearAll.push(metaMes > 0 ? metaMes * day / mr.totalDays : null);
+    projecaoData.push(null);
+    labelsAll.push(+d.slice(6,8) + '/' + mNames[+m-1]);
+  }
+
+  // Projeção
+  const lastDay = days[days.length - 1];
+  const lastY = +lastDay.slice(0,4), lastM = +lastDay.slice(4,6), lastD = +lastDay.slice(6,8);
+  const lastMonthTotal = daysInMonth(lastY, lastM);
+  if (lastD < lastMonthTotal) {
+    const mediaDaily = acum / days.length;
+    projecaoData[projecaoData.length - 1] = acum;
+    for (let d = lastD + 1; d <= lastMonthTotal; d++) {
+      const mk = lastY + '-' + String(lastM).padStart(2,'0');
+      labelsAll.push(d + '/' + mNames[lastM-1]);
+      realAcumAll.push(null);
+      metaLinearAll.push(metas[mk] ? +metas[mk] * d / lastMonthTotal : null);
+      projecaoData.push(acum + mediaDaily * (d - lastD));
+    }
+  }
+
+  // Badge %
+  const totalMeta = Object.entries(monthRanges).reduce((s, [mk, mr]) => {
+    const mm = metas[mk] ? +metas[mk] : 0;
+    return s + mm * (mr.maxD - mr.minD + 1) / mr.totalDays;
+  }, 0);
+  const pct = totalMeta > 0 ? acum / totalMeta * 100 : 0;
+  const badge = document.getElementById('meta_pct_badge');
+  if (badge && totalMeta > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = pct.toFixed(1) + '% da meta';
+    const col = pct >= 100 ? 'var(--green,#00C853)' : pct >= 80 ? 'var(--yellow,#FFC107)' : 'var(--orange,#DC2626)';
+    badge.style.background = pct >= 100 ? 'rgba(0,200,83,.15)' : pct >= 80 ? 'rgba(255,193,7,.15)' : 'rgba(220,38,38,.15)';
+    badge.style.color = col; badge.style.border = '1px solid ' + col;
+  } else if (badge) badge.style.display = 'none';
+
+  // Summary
+  const monthTotals = {};
+  for (const d of days) { const mk = d.slice(0,4)+'-'+d.slice(4,6); monthTotals[mk] = (monthTotals[mk]||0)+(dayMap[d]||0); }
+  const sumRow = document.getElementById('meta_summary_row');
+  if (sumRow) {
+    sumRow.innerHTML = Object.entries(monthTotals).map(function([mk, real]) {
+      const [y, mm] = mk.split('-');
+      const meta = metas[mk] ? +metas[mk] : 0;
+      const mr = monthRanges[mk];
+      const metaProp = meta * (mr.maxD - mr.minD + 1) / mr.totalDays;
+      const p = metaProp > 0 ? (real/metaProp*100).toFixed(1)+'%' : '—';
+      const col = metaProp > 0 && real >= metaProp ? 'var(--green,#00C853)' : metaProp > 0 && real/metaProp >= .8 ? 'var(--yellow,#FFC107)' : metaProp > 0 ? 'var(--orange,#DC2626)' : 'var(--muted,#9a9a9a)';
+      return '<span style="color:var(--muted,#9a9a9a)">'+mNames[+mm-1]+'/'+y+': <strong style="color:var(--text,#fff)">'+fmtMoneyShort(real)+'</strong>'+(meta>0?' <span style="color:'+col+'">('+ p+')</span>':'')+'</span>';
+    }).join('<span style="color:#333"> │ </span>');
+  }
+
+  // Gráfico
+  const cv = document.getElementById('chart_meta');
+  if (!cv) return;
+  const hasMeta = metaLinearAll.some(v => v !== null);
+  const hasProj = projecaoData.some(v => v !== null);
+  const datasets = [
+    { label:'Realizado', data:realAcumAll, borderColor:'var(--orange,#DC2626)', backgroundColor:'rgba(220,38,38,.08)', borderWidth:2, pointRadius:days.length<=31?3:0, pointHoverRadius:5, fill:true, tension:0.3, spanGaps:false }
+  ];
+  if (hasProj) datasets.push({ label:'Projeção', data:projecaoData, borderColor:'rgba(220,38,38,0.35)', backgroundColor:'rgba(220,38,38,.03)', borderWidth:1.5, borderDash:[4,4], pointRadius:0, pointHoverRadius:4, fill:true, tension:0.3, spanGaps:false });
+  if (hasMeta) datasets.push({ label:'Meta (linear)', data:metaLinearAll, borderColor:'rgba(154,154,154,0.7)', backgroundColor:'transparent', borderWidth:1.5, borderDash:[6,4], pointRadius:0, pointHoverRadius:4, fill:false, tension:0, spanGaps:true });
+
+  if (window._chartMeta) window._chartMeta.destroy();
+  window._chartMeta = new Chart(cv, {
+    type: 'line',
+    data: { labels: labelsAll, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ display:true, labels:{ color:'#aaa', usePointStyle:true, pointStyleWidth:10, boxHeight:6 }},
+        tooltip:{ callbacks:{ label: ctx => ctx.dataset.label+': '+fmtMoneyShort(ctx.raw||0) }}
+      },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#666', maxTicksLimit:15, maxRotation:0, font:{size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,.05)'}, ticks:{color:'#666', font:{size:10}, callback: v => fmtMoneyShort(v)} }
+      }
+    }
+  });
+
+  // Inputs edição
+  if (editGrid) {
+    editGrid.innerHTML = Object.keys(monthRanges).sort().map(function(k) {
+      const [y, mm] = k.split('-');
+      return '<div class="meta-month"><label>'+mNames[+mm-1]+'/'+y+'</label>'
+        + '<input type="number" data-key="'+k+'" value="'+(metas[k]||'')+'" placeholder="0" step="100000"></div>';
+    }).join('');
+  }
+}
+
+function initMetaPanel() {
+  const toggleBtn = document.getElementById('meta_toggle_edit');
+  const editArea  = document.getElementById('meta_edit_area');
+  const saveBtn   = document.getElementById('meta_save_btn');
+  if (!toggleBtn) return;
+  toggleBtn.onclick = function() {
+    const open = editArea.style.display !== 'none';
+    editArea.style.display = open ? 'none' : 'block';
+    toggleBtn.textContent  = open ? '✎ Editar meta' : '✕ Fechar';
+  };
+  saveBtn.onclick = function() {
+    const metas = loadMetas();
+    document.querySelectorAll('#meta_inputs_grid input').forEach(function(inp) {
+      const k = inp.dataset.key, v = inp.value.trim();
+      if (v && +v > 0) metas[k] = +v; else delete metas[k];
+    });
+    saveMetas(metas);
+    renderMetaPanel();
+    editArea.style.display = 'none';
+    toggleBtn.textContent = '✎ Editar meta';
+  };
+}
+
 function renderAll() {
   clearTimeout(_renderTimer);
   _renderTimer = setTimeout(function() {
@@ -1283,6 +1490,7 @@ function renderAll() {
     renderTabAnos(agg);
     renderProdutos(agg);
     renderClientes(agg);
+    renderMetaPanel();
   }, 30);
 }
 
@@ -1548,6 +1756,7 @@ function init() {
   buildMap();
   setupMapTooltip();
   renderAll();
+  initMetaPanel();
 }
 
 if (document.readyState === 'loading') {

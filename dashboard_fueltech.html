@@ -774,20 +774,6 @@
   <main>
     <section class="client-diag" id="client_diag" aria-live="polite"></section>
 
-    <!-- Meta x Realizado -->
-    <div class="meta-panel" id="meta_panel" style="display:none">
-      <h2>
-        <span>🎯 Meta × Realizado — Faturamento Mensal</span>
-        <button class="meta-toggle-btn" id="meta_toggle_edit">✎ Editar metas</button>
-      </h2>
-      <div class="meta-grid" id="meta_grid"></div>
-      <div id="meta_edit_area" style="display:none;margin-top:14px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Digite a meta mensal em R$ (ex: 5000000 para R$ 5M)</div>
-        <div class="meta-grid" id="meta_inputs_grid"></div>
-        <button class="meta-save" id="meta_save_btn">💾 Salvar metas</button>
-      </div>
-    </div>
-
     <div class="kpis" id="kpis"></div>
 
     <div class="row r2">
@@ -855,9 +841,19 @@
         </h2>
         <div class="chart-wrap"><canvas id="chart_produtos"></canvas></div>
       </div>
-      <div class="panel">
-        <h2>Vendas por Tabela de Compra</h2>
-        <div class="chart-wrap"><canvas id="chart_tabelas"></canvas></div>
+      <div class="panel" style="overflow:auto">
+        <h2 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <span>🎯 Meta × Realizado</span>
+          <button class="meta-toggle-btn" id="meta_toggle_edit">✎ Editar metas</button>
+        </h2>
+        <div id="meta_panel" style="flex:1">
+          <div class="meta-grid" id="meta_grid" style="margin-bottom:0"></div>
+          <div id="meta_edit_area" style="display:none;margin-top:12px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Digite a meta em R$ (ex: 5000000 para R$ 5M)</div>
+            <div class="meta-grid" id="meta_inputs_grid"></div>
+            <button class="meta-save" id="meta_save_btn">💾 Salvar metas</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1868,6 +1864,7 @@ function renderTopProdutos(agg) {
   charts.produtos=new Chart(document.getElementById('chart_produtos'),cfg);
 }
 function renderTabelas(agg) {
+  if (!document.getElementById('chart_tabelas')) return; // painel removido
   const entries=Object.entries(agg.porTabela).sort((a,b)=>b[1].val-a[1].val);
   const labels=entries.map(e=>e[0]);
   const data=entries.map(e=>e[1].val);
@@ -3942,8 +3939,7 @@ function renderMetaPanel() {
   }
 
   const keys = Object.keys(monthMap).sort();
-  if (!keys.length) { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
+  if (!keys.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">Nenhum dado no recorte atual.</div>'; return; }
 
   const metas = loadMetas();
   const mNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];

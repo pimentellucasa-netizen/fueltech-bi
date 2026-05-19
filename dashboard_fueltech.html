@@ -1731,7 +1731,7 @@ function buildTimelineDaily(agg, aggComp) {
   }
   return {
     type: 'line',
-    data: { labels, datasets },
+    data: { labels: labelsAll, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -4037,12 +4037,46 @@ function renderMetaPanel() {
     sumRow.innerHTML = parts.join('<span style="color:var(--border)"> │ </span>');
   }
 
+  // ── Projeção: estende o realizado até o fim do mês com média diária ──
+  // Só projeta se o último dia do recorte não é o último dia do mês
+  const lastDay = days[days.length - 1];
+  const lastY   = +lastDay.slice(0,4), lastM = +lastDay.slice(4,6), lastD = +lastDay.slice(6,8);
+  const lastMonthTotalDays = daysInMonth(lastY, lastM);
+  const needsProjection = lastD < lastMonthTotalDays;
+
+  const labelsAll    = [...labels];
+  const realAcumAll  = [...realAcum];
+  const metaLinearAll = [...metaLinear];
+  const projecaoData  = Array(labels.length).fill(null);
+
+  if (needsProjection) {
+    // Média diária do realizado no período com dados
+    const diasComDados = days.length;
+    const mediaDaily   = acum / diasComDados;
+
+    // Ponto de junção: último valor real
+    projecaoData[projecaoData.length - 1] = acum;
+
+    // Adicionar dias restantes do mês
+    for (let d = lastD + 1; d <= lastMonthTotalDays; d++) {
+      const diasExtra  = d - lastD;
+      const projecao   = acum + mediaDaily * diasExtra;
+      const mk         = lastY + '-' + String(lastM).padStart(2,'0');
+      const metaDia    = metas[mk] ? +metas[mk] * d / lastMonthTotalDays : null;
+
+      labelsAll.push(d + '/' + ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][lastM-1]);
+      realAcumAll.push(null);          // sem dado real
+      metaLinearAll.push(metaDia);
+      projecaoData.push(projecao);
+    }
+  }
+
   // ── Gráfico ──
-  const hasMeta = metaLinear.some(v => v !== null);
+  const hasMeta = metaLinearAll.some(v => v !== null);
   const datasets = [
     {
       label: 'Realizado',
-      data: realAcum,
+      data: realAcumAll,
       borderColor: 'var(--orange)',
       backgroundColor: 'rgba(220,38,38,.08)',
       borderWidth: 2,
@@ -4050,12 +4084,28 @@ function renderMetaPanel() {
       pointHoverRadius: 5,
       fill: true,
       tension: 0.3,
+      spanGaps: false,
     }
   ];
+  if (needsProjection) {
+    datasets.push({
+      label: 'Projeção',
+      data: projecaoData,
+      borderColor: 'rgba(220,38,38,0.35)',
+      backgroundColor: 'rgba(220,38,38,.03)',
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: true,
+      tension: 0.3,
+      spanGaps: false,
+    });
+  }
   if (hasMeta) {
     datasets.push({
       label: 'Meta (linear)',
-      data: metaLinear,
+      data: metaLinearAll,
       borderColor: 'rgba(154,154,154,0.7)',
       backgroundColor: 'transparent',
       borderWidth: 1.5,

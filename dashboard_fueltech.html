@@ -1399,25 +1399,25 @@ function aggregate(rows) {
     const uf = DATA.ufs[r[C.uf]];
     if (uf==='EX' && !isDev) { agg.exCount++; agg.exValor+=val; agg.exClientes.add(r[C.cl]); }
     else if (uf) {
-      if(!agg.porUf[uf]) agg.porUf[uf]={cnt:0,val:0,fat:0,clients:{}};
+      if(!agg.porUf[uf]) agg.porUf[uf]={cnt:0,val:0,bru:0,fat:0,clients:{}};
       const u=agg.porUf[uf];
-      if(!isDev){ u.cnt++; u.clients[r[C.cl]]=(u.clients[r[C.cl]]||0)+val; }
+      if(!isDev){ u.cnt++; u.bru+=val; u.clients[r[C.cl]]=(u.clients[r[C.cl]]||0)+val; }
       u.val+=val; u.fat+=fat;
     }
     const ym=r[C.ano]*100+r[C.mes];
-    if(!agg.porMesAno[ym]) agg.porMesAno[ym]={val:0,fat:0,cnt:0};
+    if(!agg.porMesAno[ym]) agg.porMesAno[ym]={val:0,bru:0,fat:0,cnt:0};
     agg.porMesAno[ym].val+=val; agg.porMesAno[ym].fat+=fat;
-    if(!isDev) agg.porMesAno[ym].cnt++;
+    if(!isDev){ agg.porMesAno[ym].bru+=val; agg.porMesAno[ym].cnt++; }
     const ymd=rowYMD(r);
-    if(!agg.porDia[ymd]) agg.porDia[ymd]={val:0,fat:0,cnt:0};
+    if(!agg.porDia[ymd]) agg.porDia[ymd]={val:0,bru:0,fat:0,cnt:0};
     agg.porDia[ymd].val+=val; agg.porDia[ymd].fat+=fat;
-    if(!isDev) agg.porDia[ymd].cnt++;
-    agg.porCliente[r[C.cl]]=(agg.porCliente[r[C.cl]]||0)+val;
+    if(!isDev){ agg.porDia[ymd].bru+=val; agg.porDia[ymd].cnt++; }
+    if(!isDev) agg.porCliente[r[C.cl]]=(agg.porCliente[r[C.cl]]||0)+val;
     if (r[C.tb]>=0) {
       const tb=DATA.tabelas[r[C.tb]];
-      if(!agg.porTabela[tb]) agg.porTabela[tb]={val:0,cnt:0,byYear:{}};
+      if(!agg.porTabela[tb]) agg.porTabela[tb]={val:0,bru:0,cnt:0,byYear:{}};
       agg.porTabela[tb].val+=val;
-      if(!isDev) agg.porTabela[tb].cnt++;
+      if(!isDev){ agg.porTabela[tb].bru+=val; agg.porTabela[tb].cnt++; }
       agg.porTabela[tb].byYear[r[C.ano]]=(agg.porTabela[tb].byYear[r[C.ano]]||0)+val;
     }
     if (r[C.vd]>=0) {
@@ -1439,6 +1439,17 @@ function aggregate(rows) {
 
 function scopedVal(agg) {
   return document.querySelector('#metric_scope button.active').dataset.s==='liq' ? agg.valLiq : agg.valBruto;
+}
+function scopedS() {
+  return document.querySelector('#metric_scope button.active').dataset.s; // 'bru' ou 'liq'
+}
+function scopedV(entry) {
+  // entry = objeto com .bru, .val, .fat — retorna o campo correto conforme toggle
+  if (!entry) return 0;
+  const s = scopedS();
+  if (s === 'fat') return entry.fat || 0;
+  if (s === 'liq') return entry.val || 0;   // val = vendas - devoluções
+  return entry.bru || entry.val || 0;        // bru = só vendas
 }
 function scopedFat(agg) {
   // faturamento líquido é sempre ICMS/IPI-descontado; bruto aqui = só vendas sem devol
@@ -1699,7 +1710,7 @@ function buildTimelineDaily(agg, aggComp) {
   const labels = [], primaryData = [];
   forEachDay(from, to, (ymd, n) => {
     labels.push(`${String(ymd.d).padStart(2,'0')}/${MONTHS[ymd.m-1]}`);
-    primaryData.push(agg.porDia[n] ? agg.porDia[n].val : 0);
+    primaryData.push(scopedV(agg.porDia[n]));
   });
   const fmtYMD = ymd => `${String(ymd.d).padStart(2,'0')}/${MONTHS[ymd.m-1]}/${ymd.y}`;
   const datasets = [{
@@ -1714,7 +1725,7 @@ function buildTimelineDaily(agg, aggComp) {
     if (comp) {
       const compData = [];
       forEachDay(comp.rangeFrom, comp.rangeTo, (_, n) => {
-        compData.push(aggComp.porDia[n] ? aggComp.porDia[n].val : 0);
+        compData.push(scopedV(aggComp.porDia[n]));
       });
       // Alinha tamanhos (em casos raros com diferença de 1 dia por ano bissexto)
       while (compData.length < primaryData.length) compData.push(0);
@@ -1751,7 +1762,7 @@ function buildTimelineMonthly(agg, aggComp) {
   const colors=['#DC2626','#00C853','#2196F3','#AAAAAA'];
   const datasets=anos.map((a,i)=>{
     const data=Array(12).fill(0);
-    for(let m=1;m<=12;m++){const v=agg.porMesAno[a*100+m]; data[m-1]=v?v.val:0;}
+    for(let m=1;m<=12;m++){const v=agg.porMesAno[a*100+m]; data[m-1]=scopedV(v);}
     return {label:String(a),data,borderColor:colors[i%colors.length],
       backgroundColor:colors[i%colors.length]+'30',tension:0.3,borderWidth:2,pointRadius:3,pointHoverRadius:5};
   });
@@ -1871,9 +1882,9 @@ function renderTopProdutos(agg) {
 }
 function renderTabelas(agg) {
   if (!document.getElementById('chart_tabelas')) return; // painel removido
-  const entries=Object.entries(agg.porTabela).sort((a,b)=>b[1].val-a[1].val);
+  const entries=Object.entries(agg.porTabela).sort((a,b)=>scopedV(b[1])-scopedV(a[1]));
   const labels=entries.map(e=>e[0]);
-  const data=entries.map(e=>e[1].val);
+  const data=entries.map(e=>scopedV(e[1]));
   const colors=labels.map(l=>{
     const u=l.toUpperCase();
     if(u.includes('OURO')) return '#FFC107';
@@ -2046,7 +2057,7 @@ let _meCache = [];
 function openEstadosModal() {
   const agg = aggregate(filtered());
   let totVal = 0;
-  for (const uf in agg.porUf) totVal += agg.porUf[uf].val;
+  for (const uf in agg.porUf) totVal += scopedV(agg.porUf[uf]);
   _meCache = Object.entries(agg.porUf)
     .filter(e => e[1] && (e[1].val > 0 || e[1].cnt > 0))
     .map(e => ({
@@ -2107,9 +2118,9 @@ function renderEstadosModal() {
   document.getElementById('me_summary').textContent = arr.length + ' de ' + _meCache.length + ' estados';
 }
 function renderVendTabelas(agg) {
-  const entries=Object.entries(agg.porTabela).sort((a,b)=>b[1].val-a[1].val);
+  const entries=Object.entries(agg.porTabela).sort((a,b)=>scopedV(b[1])-scopedV(a[1]));
   const labels=entries.map(e=>e[0]);
-  const data=entries.map(e=>e[1].val);
+  const data=entries.map(e=>scopedV(e[1]));
   const cnts=entries.map(e=>e[1].cnt);
   const colors=labels.map(l=>{
     const u=l.toUpperCase();
@@ -3628,7 +3639,7 @@ function renderWorldHierarchy() {
     if (state.mapCountry === 'Brazil') {
       const rows = filtered();
       const agg = aggregate(rows);
-      for (const uf in agg.porUf) if (agg.porUf[uf].val > legendMax) legendMax = agg.porUf[uf].val;
+      for (const uf in agg.porUf) if (scopedV(agg.porUf[uf]) > legendMax) legendMax = scopedV(agg.porUf[uf]);
     }
   } else {
     for (const ds of (CONTINENT_PAISES[state.mapView] || [])) {

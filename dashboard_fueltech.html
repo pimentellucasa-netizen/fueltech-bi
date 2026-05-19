@@ -681,8 +681,8 @@
 <header>
   <h1><span class="accent">FUELTECH</span> BI — Análise de Pedidos</h1>
   <div class="metric-scope" id="metric_scope" title="Escopo dos valores">
-    <button class="active" data-s="liq">Líquido (vendas − devoluções)</button>
-    <button data-s="bru">Bruto (só vendas)</button>
+    <button class="active" data-s="bru">Bruto (só vendas)</button>
+    <button data-s="liq">Líquido (− devoluções)</button>
   </div>
   <button type="button" class="br-only-toggle-mini" id="br_only_toggle" title="Filtra apenas vendas no Brasil, excluindo exportações e empresas do grupo Fueltech">
     <span class="br-icon">🇧🇷</span>
@@ -1487,7 +1487,7 @@ function renderKPIs(agg, aggComp) {
       curr:totalPed, prev:cp?cp.totalPed:null, fmt:fmtInt},
     {label:`Faturamento ${scopedLabel()}`,value:fmtMoneyShort(valorPrincipal),sub:fmtMoney(valorPrincipal),
       curr:valorPrincipal, prev:cp?cp.valorPrincipal:null, fmt:fmtMoneyShort},
-    {label:'Faturamento Líquido',value:fmtMoneyShort(agg.fatLiq),sub:'Sem ICMS/IPI',
+    {label:'Fat. s/ ICMS/IPI',value:fmtMoneyShort(agg.fatLiq),sub:'Sem ICMS/IPI',
       curr:agg.fatLiq, prev:cp?cp.fatLiq:null, fmt:fmtMoneyShort},
     {label:'Clientes Únicos',value:fmtInt(agg.uniqueClients.size),sub:'só em vendas',
       curr:agg.uniqueClients.size, prev:cp?cp.uniq:null, fmt:fmtInt},
